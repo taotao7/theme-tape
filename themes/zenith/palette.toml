@@ -1,0 +1,114 @@
+# Zenith Theme — Unified Color Palette
+# Single source of truth for Ghostty, Tmux, and Neovim
+#
+# Design principles (from visual ergonomics research):
+#   - "Dark Neon" paradigm: low-luminance base + desaturated neon accents
+#   - Background L* 8-12 (CIELAB), never pure black
+#   - Text contrast ratio 7:1–12:1 (sweet spot), comments ~4.5:1
+#   - Accent saturation reduced 15-25% from pure values
+#   - Warm-tinted backgrounds to reduce short-wave blue light
+
+[meta]
+name = "zenith"
+author = "tao"
+
+# ─── Dark Mode ("Zenith Night") ────────────────────────────────────
+# Deep blue-violet base inspired by Tokyo Night Moon atmosphere
+# with Rosé Pine's warmth in the accent palette
+[dark]
+
+[dark.base]
+bg       = "#161621"   # L*≈9, deep blue-violet (no pure black)
+bg_dim   = "#121218"   # inactive splits / dim_inactive
+bg1      = "#1e1e2e"   # surface: sidebars, panels
+bg2      = "#262640"   # float: popups, menus, hover
+bg3      = "#2e2e4a"   # visual selection
+bg4      = "#383860"   # search highlight, cursorline
+border   = "#3a3a58"   # window/split borders
+
+[dark.text]
+fg       = "#c8cfe6"   # primary text, CR ≈ 11.9:1
+fg_dim   = "#8e95b0"   # secondary text, inactive labels
+comment  = "#5c6888"   # comments (italic), CR ≈ 4.5:1
+
+[dark.accent]
+red      = "#f07088"   # coral — errors, deletions
+orange   = "#e09868"   # amber — constants, numbers
+yellow   = "#e0c070"   # gold — types, warnings
+green    = "#70c890"   # mint — strings, additions
+cyan     = "#60c8d8"   # ice — parameters, attributes
+blue     = "#6898f0"   # electric — functions
+purple   = "#b070e8"   # neon violet — keywords (cyberpunk anchor)
+pink     = "#e070a8"   # neon rose — regex, special
+
+[dark.diagnostic]
+error    = "#f05068"
+warn     = "#e0a040"
+info     = "#60b0e0"
+hint     = "#70c890"
+
+[dark.git]
+add      = "#70c890"
+change   = "#e0c070"
+delete   = "#f07088"
+
+# ─── Light Mode ("Zenith Day") ─────────────────────────────────────
+# Cool lavender white base with deepened accents for readability
+[light]
+
+[light.base]
+bg       = "#f0edf8"   # L*≈94, cool lavender white (no pure white)
+bg_dim   = "#f5f3fb"   # inactive splits
+bg1      = "#e6e3f0"   # surface
+bg2      = "#dcd8e8"   # float
+bg3      = "#cfc8e0"   # visual selection
+bg4      = "#c4c0d8"   # search highlight, cursorline
+border   = "#b8b0cc"   # borders
+
+[light.text]
+fg       = "#2a2840"   # deep blue-violet, CR ≈ 10.5:1
+fg_dim   = "#5c5878"   # secondary
+comment  = "#8880a8"   # comments (italic), CR ≈ 4.5:1
+
+[light.accent]
+red      = "#c83858"   # deep coral
+orange   = "#b86828"   # burnt amber
+yellow   = "#907020"   # dark gold
+green    = "#2a8858"   # forest mint
+cyan     = "#1880a0"   # deep teal
+blue     = "#3060c0"   # royal blue
+purple   = "#6838b0"   # deep violet
+pink     = "#b83878"   # deep rose
+
+[light.diagnostic]
+error    = "#c02040"
+warn     = "#a07010"
+info     = "#2070b0"
+hint     = "#2a8858"
+
+[light.git]
+add      = "#2a8858"
+change   = "#907020"
+delete   = "#c83858"
+
+# ─── ANSI 16-Color Mapping ─────────────────────────────────────────
+# Maps standard ANSI color indices to palette colors
+# These are used by CLI tools (ls, git, grep, etc.)
+[ansi_map]
+# index = "palette_path"  (resolved at generation time)
+color0  = "base.bg1"       # Black → surface bg
+color1  = "accent.red"     # Red
+color2  = "accent.green"   # Green
+color3  = "accent.yellow"  # Yellow
+color4  = "accent.blue"    # Blue
+color5  = "accent.purple"  # Magenta
+color6  = "accent.cyan"    # Cyan
+color7  = "text.fg"        # White → main text
+color8  = "text.comment"   # Bright Black → comments
+color9  = "accent.red"     # Bright Red
+color10 = "accent.green"   # Bright Green
+color11 = "accent.yellow"  # Bright Yellow
+color12 = "accent.blue"    # Bright Blue
+color13 = "accent.purple"  # Bright Magenta
+color14 = "accent.cyan"    # Bright Cyan
+color15 = "text.fg"        # Bright White → main text

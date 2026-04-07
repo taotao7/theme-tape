@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cassette Futurism Theme Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'JetBrains Mono', monospace; background: #111316; padding: 48px; color: #d4d4d4; }
+  .container { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+
+  /* Header */
+  .header { text-align: center; }
+  .header h1 { font-size: 42px; font-weight: 700; background: linear-gradient(135deg, #ffb86c, #ff79c6, #bd93f9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; letter-spacing: -1px; text-transform: uppercase; }
+  .header p { color: #6272a4; font-size: 14px; }
+
+  /* Mode sections */
+  .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .mode-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #6272a4; margin-bottom: 12px; }
+
+  /* Terminal mock */
+  .terminal { border-radius: 12px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+  .terminal.dark { background: #1a1d21; }
+  .terminal.light { background: #f5f0e8; }
+  .titlebar { height: 36px; display: flex; align-items: center; padding: 0 14px; gap: 8px; }
+  .terminal.dark .titlebar { background: #1f2327; }
+  .terminal.light .titlebar { background: #ede8e0; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.r { background: #ff5555; }
+  .dot.y { background: #ffb86c; }
+  .dot.g { background: #50fa7b; }
+  .terminal.light .dot.r { background: #9d0006; }
+  .terminal.light .dot.y { background: #d65d0e; }
+  .terminal.light .dot.g { background: #458588; }
+  .titlebar-text { font-size: 11px; margin-left: 8px; }
+  .terminal.dark .titlebar-text { color: #6272a4; }
+  .terminal.light .titlebar-text { color: #928374; }
+
+  /* Code area */
+  .code { padding: 16px 20px; font-size: 13px; line-height: 1.7; white-space: pre; }
+  .terminal.dark .code { background: #25292e; }
+  .terminal.light .code { background: #faf8f4; color: #2d2a27; }
+
+  /* Tmux status bar */
+  .tmux-bar { display: flex; justify-content: space-between; align-items: center; padding: 4px 12px; font-size: 12px; }
+  .terminal.dark .tmux-bar { background: #1a1d21; }
+  .terminal.light .tmux-bar { background: #f5f0e8; }
+  .bubble { padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+  .terminal.dark .bubble.session { background: #ffb86c; color: #1a1d21; }
+  .terminal.light .bubble.session { background: #d65d0e; color: #f5f0e8; }
+  .terminal.dark .bubble.active { background: #ffb86c; color: #1f2327; }
+  .terminal.light .bubble.active { background: #d65d0e; color: #f5f0e8; }
+  .terminal.dark .bubble.inactive { background: #25292e; color: #6272a4; }
+  .terminal.light .bubble.inactive { background: #ede8e0; color: #928374; }
+  .terminal.dark .bubble.time { background: #25292e; color: #8a8f96; }
+  .terminal.light .bubble.time { background: #ede8e0; color: #6b6560; }
+  .tabs { display: flex; gap: 6px; }
+
+  /* Dark syntax colors */
+  .d-kw   { color: #ffb86c; }
+  .d-fn   { color: #ffb86c; }
+  .d-str  { color: #50fa7b; }
+  .d-num  { color: #8be9fd; }
+  .d-type { color: #bd93f9; }
+  .d-cmt  { color: #6272a4; font-style: italic; }
+  .d-var  { color: #f8f8f2; }
+  .d-param{ color: #8be9fd; }
+  .d-op   { color: #ff79c6; }
+  .d-tag  { color: #ff79c6; }
+
+  /* Light syntax colors */
+  .l-kw   { color: #d65d0e; }
+  .l-fn   { color: #d65d0e; }
+  .l-str  { color: #79740e; }
+  .l-num  { color: #458588; }
+  .l-type { color: #b16286; }
+  .l-cmt  { color: #928374; font-style: italic; }
+  .l-var  { color: #2d2a27; }
+  .l-param{ color: #458588; }
+  .l-op   { color: #cc241d; }
+  .l-tag  { color: #cc241d; }
+
+  /* Palette swatches */
+  .palette-section { margin-top: 8px; }
+  .palette-section h3 { font-size: 12px; color: #6272a4; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1.5px; }
+  .swatches { display: flex; gap: 4px; flex-wrap: wrap; }
+  .swatch-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .swatch { width: 56px; height: 40px; border-radius: 8px; position: relative; }
+  .swatch-label { font-size: 9px; color: #6272a4; }
+  .swatch-hex { font-size: 9px; color: #6272a4; }
+
+  /* Footer */
+  .footer { text-align: center; color: #6272a4; font-size: 11px; padding-top: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Cassette Futurism</h1>
+    <p>Unified theme for Ghostty · Tmux · Neovim · Yazi · VS Code — inspired by CRT monitors & analog dream aesthetics</p>
+  </div>
+
+  <div class="modes">
+    <!-- DARK MODE -->
+    <div>
+      <div class="mode-label">◆ Dark Mode — "Magnetic Night"</div>
+      <div class="terminal dark">
+        <div class="titlebar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="titlebar-text">nvim — main.ts</span>
+        </div>
+        <div class="code">
+<span class="d-cmt">// Cassette Futurism: amber CRT glow</span>
+<span class="d-kw">import</span> <span class="d-var">{ createApp }</span> <span class="d-kw">from</span> <span class="d-str">"vue"</span>
+
+<span class="d-kw">interface</span> <span class="d-type">TapeConfig</span> <span class="d-var">{</span>
+  <span class="d-var">label</span><span class="d-op">:</span> <span class="d-type">string</span>
+  <span class="d-var">bitrate</span><span class="d-op">:</span> <span class="d-type">number</span>
+  <span class="d-var">tracks</span><span class="d-op">:</span> <span class="d-type">Record</span><span class="d-op">&lt;</span><span class="d-type">string</span><span class="d-op">,</span> <span class="d-type">string</span><span class="d-op">&gt;</span>
+<span class="d-var">}</span>
+
+<span class="d-kw">const</span> <span class="d-fn">loadCassette</span> <span class="d-op">=</span> <span class="d-kw">async</span> <span class="d-var">(</span>
+  <span class="d-param">tape</span><span class="d-op">:</span> <span class="d-type">TapeConfig</span>
+<span class="d-var">)</span><span class="d-op">:</span> <span class="d-type">Promise</span><span class="d-op">&lt;</span><span class="d-type">void</span><span class="d-op">&gt;</span> <span class="d-kw">=></span> <span class="d-var">{</span>
+  <span class="d-kw">const</span> <span class="d-var">gain</span> <span class="d-op">=</span> <span class="d-num">0.85</span>
+  <span class="d-kw">if</span> <span class="d-var">(</span><span class="d-param">tape</span><span class="d-var">.bitrate</span> <span class="d-op">&gt;</span> <span class="d-num">320</span><span class="d-var">)</span> <span class="d-var">{</span>
+    <span class="d-fn">rewind</span><span class="d-var">(</span><span class="d-param">tape</span><span class="d-var">.tracks,</span> <span class="d-var">gain</span><span class="d-var">)</span>
+  <span class="d-var">}</span>
+  <span class="d-kw">return</span> <span class="d-fn">play</span><span class="d-var">(</span><span class="d-str">`tape-</span><span class="d-op">${</span><span class="d-param">tape</span><span class="d-var">.label</span><span class="d-op">}</span><span class="d-str">`</span><span class="d-var">)</span>
+<span class="d-var">}</span>
+        </div>
+        <div class="tmux-bar">
+          <span class="bubble session">  dev</span>
+          <div class="tabs">
+            <span class="bubble active">1  nvim</span>
+            <span class="bubble inactive">2  zsh</span>
+            <span class="bubble inactive">3  node</span>
+          </div>
+          <span class="bubble time">  14:30</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIGHT MODE -->
+    <div>
+      <div class="mode-label">◇ Light Mode — "Beige Terminal"</div>
+      <div class="terminal light">
+        <div class="titlebar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span class="titlebar-text">nvim — main.ts</span>
+        </div>
+        <div class="code">
+<span class="l-cmt">// Cassette Futurism: retro beige warmth</span>
+<span class="l-kw">import</span> <span class="l-var">{ createApp }</span> <span class="l-kw">from</span> <span class="l-str">"vue"</span>
+
+<span class="l-kw">interface</span> <span class="l-type">TapeConfig</span> <span class="l-var">{</span>
+  <span class="l-var">label</span><span class="l-op">:</span> <span class="l-type">string</span>
+  <span class="l-var">bitrate</span><span class="l-op">:</span> <span class="l-type">number</span>
+  <span class="l-var">tracks</span><span class="l-op">:</span> <span class="l-type">Record</span><span class="l-op">&lt;</span><span class="l-type">string</span><span class="l-op">,</span> <span class="l-type">string</span><span class="l-op">&gt;</span>
+<span class="l-var">}</span>
+
+<span class="l-kw">const</span> <span class="l-fn">loadCassette</span> <span class="l-op">=</span> <span class="l-kw">async</span> <span class="l-var">(</span>
+  <span class="l-param">tape</span><span class="l-op">:</span> <span class="l-type">TapeConfig</span>
+<span class="l-var">)</span><span class="l-op">:</span> <span class="l-type">Promise</span><span class="l-op">&lt;</span><span class="l-type">void</span><span class="l-op">&gt;</span> <span class="l-kw">=></span> <span class="l-var">{</span>
+  <span class="l-kw">const</span> <span class="l-var">gain</span> <span class="l-op">=</span> <span class="l-num">0.85</span>
+  <span class="l-kw">if</span> <span class="l-var">(</span><span class="l-param">tape</span><span class="l-var">.bitrate</span> <span class="l-op">&gt;</span> <span class="l-num">320</span><span class="l-var">)</span> <span class="l-var">{</span>
+    <span class="l-fn">rewind</span><span class="l-var">(</span><span class="l-param">tape</span><span class="l-var">.tracks,</span> <span class="l-var">gain</span><span class="l-var">)</span>
+  <span class="l-var">}</span>
+  <span class="l-kw">return</span> <span class="l-fn">play</span><span class="l-var">(</span><span class="l-str">`tape-</span><span class="l-op">${</span><span class="l-param">tape</span><span class="l-var">.label</span><span class="l-op">}</span><span class="l-str">`</span><span class="l-var">)</span>
+<span class="l-var">}</span>
+        </div>
+        <div class="tmux-bar">
+          <span class="bubble session">  dev</span>
+          <div class="tabs">
+            <span class="bubble active">1  nvim</span>
+            <span class="bubble inactive">2  zsh</span>
+            <span class="bubble inactive">3  node</span>
+          </div>
+          <span class="bubble time">  14:30</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Palette swatches -->
+  <div class="palette-section">
+    <h3>Color Palette</h3>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div>
+        <div style="font-size:10px; color:#6272a4; margin-bottom:8px;">DARK ACCENTS</div>
+        <div class="swatches">
+          <div class="swatch-group"><div class="swatch" style="background:#ff5555"></div><div class="swatch-hex">red</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#ffb86c"></div><div class="swatch-hex">orange</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#f1fa8c"></div><div class="swatch-hex">yellow</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#50fa7b"></div><div class="swatch-hex">green</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#8be9fd"></div><div class="swatch-hex">cyan</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#8be9fd"></div><div class="swatch-hex">blue</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#bd93f9"></div><div class="swatch-hex">purple</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#ff79c6"></div><div class="swatch-hex">pink</div></div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px; color:#6272a4; margin-bottom:8px;">LIGHT ACCENTS</div>
+        <div class="swatches">
+          <div class="swatch-group"><div class="swatch" style="background:#9d0006"></div><div class="swatch-hex">red</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#d65d0e"></div><div class="swatch-hex">orange</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#b57614"></div><div class="swatch-hex">yellow</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#79740e"></div><div class="swatch-hex">green</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#458588"></div><div class="swatch-hex">cyan</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#076678"></div><div class="swatch-hex">blue</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#b16286"></div><div class="swatch-hex">purple</div></div>
+          <div class="swatch-group"><div class="swatch" style="background:#cc241d"></div><div class="swatch-hex">pink</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Cassette Futurism — CRT amber glow · phosphor green · vintage beige · analog dream aesthetics
+  </div>
+</div>
+</body>
+</html>

@@ -224,4 +224,13 @@ describe("theme-tape manager", () => {
     expect(readFileSync(join(root, ".config/nvim/plugin/theme-tape.lua"), "utf8")).toContain('transparent = false');
     expect(readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8")).toContain('status-style "bg=#{@tape_bg},fg=#{@tape_fg}"');
   });
+
+  test("cassette tmux dark output uses a warmer analog palette", () => {
+    const tmuxDark = readFileSync(join(REPO_ROOT, "themes/cassette-futurism/dist/tmux/cassette-futurism-dark.conf"), "utf8");
+
+    expect(tmuxDark).toContain('set -g @tape_purple "#b08968"');
+    expect(tmuxDark).toContain('set -g @tape_green "#7fb081"');
+    expect(tmuxDark).toContain('set -g mode-style "bg=#{@tape_dark},fg=#{@tape_orange},bold"');
+    expect(tmuxDark).toContain('set -g message-style "bg=#{@tape_dark},fg=#{@tape_green},border-style=double"');
+  });
 });

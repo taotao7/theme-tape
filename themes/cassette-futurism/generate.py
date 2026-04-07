@@ -100,13 +100,55 @@ def gen_tmux(palette: dict, mode: str) -> str:
     p = palette[mode]
 
     if mode == "dark":
-        tape_bg = "default"
-        tape_active_bg = "#{@tape_orange}"
-        tape_active_fg = "#{@tape_dark}"
+        tmux = {
+            "bg": "default",
+            "fg": "#d7d0c2",
+            "red": "#d97a66",
+            "orange": "#d6a168",
+            "yellow": "#c4b16f",
+            "green": "#7fb081",
+            "cyan": "#78a8a4",
+            "blue": "#6f94a6",
+            "purple": "#b08968",
+            "pink": "#c37a63",
+            "gray": "#7b847d",
+            "dark": p["base"]["bg1"],
+            "void": p["base"]["bg"],
+            "active_bg": "#{@tape_orange}",
+            "active_fg": "#{@tape_dark}",
+            "mode_bg": "#{@tape_dark}",
+            "mode_fg": "#{@tape_orange}",
+            "message_bg": "#{@tape_dark}",
+            "message_fg": "#{@tape_green}",
+            "message_command_bg": "#{@tape_dark}",
+            "message_command_fg": "#{@tape_cyan}",
+            "pane_active_fg": "#{@tape_green}",
+        }
     else:
-        tape_bg = p["base"]["bg"]
-        tape_active_bg = "#{@tape_orange}"
-        tape_active_fg = "#{@tape_bg}"
+        tmux = {
+            "bg": p["base"]["bg"],
+            "fg": p["text"]["fg"],
+            "red": p["accent"]["red"],
+            "orange": p["accent"]["orange"],
+            "yellow": p["accent"]["yellow"],
+            "green": p["accent"]["green"],
+            "cyan": p["accent"]["cyan"],
+            "blue": p["accent"]["blue"],
+            "purple": p["accent"]["purple"],
+            "pink": p["accent"]["pink"],
+            "gray": p["text"]["comment"],
+            "dark": p["base"]["bg1"],
+            "void": p["base"]["bg"],
+            "active_bg": "#{@tape_orange}",
+            "active_fg": "#{@tape_bg}",
+            "mode_bg": "#{@tape_orange}",
+            "mode_fg": "#{@tape_dark}",
+            "message_bg": "#{@tape_dark}",
+            "message_fg": "#{@tape_orange}",
+            "message_command_bg": "#{@tape_dark}",
+            "message_command_fg": "#{@tape_orange}",
+            "pane_active_fg": "#{@tape_orange}",
+        }
 
     return textwrap.dedent(f"""\
         # --- Cassette Futurism: {mode.title()} Mode ---
@@ -114,34 +156,34 @@ def gen_tmux(palette: dict, mode: str) -> str:
         # Compatible with @tape_* variable convention
 
         # ── Palette Variables ──
-        set -g @tape_bg "{tape_bg}"
-        set -g @tape_fg "{p['text']['fg']}"
-        set -g @tape_red "{p['accent']['red']}"
-        set -g @tape_orange "{p['accent']['orange']}"
-        set -g @tape_yellow "{p['accent']['yellow']}"
-        set -g @tape_green "{p['accent']['green']}"
-        set -g @tape_cyan "{p['accent']['cyan']}"
-        set -g @tape_blue "{p['accent']['blue']}"
-        set -g @tape_purple "{p['accent']['purple']}"
-        set -g @tape_pink "{p['accent']['pink']}"
-        set -g @tape_gray "{p['text']['comment']}"
-        set -g @tape_dark "{p['base']['bg1']}"
-        set -g @tape_void "{p['base']['bg']}"
-        set -g @tape_active_bg "{tape_active_bg}"
-        set -g @tape_active_fg "{tape_active_fg}"
+        set -g @tape_bg "{tmux['bg']}"
+        set -g @tape_fg "{tmux['fg']}"
+        set -g @tape_red "{tmux['red']}"
+        set -g @tape_orange "{tmux['orange']}"
+        set -g @tape_yellow "{tmux['yellow']}"
+        set -g @tape_green "{tmux['green']}"
+        set -g @tape_cyan "{tmux['cyan']}"
+        set -g @tape_blue "{tmux['blue']}"
+        set -g @tape_purple "{tmux['purple']}"
+        set -g @tape_pink "{tmux['pink']}"
+        set -g @tape_gray "{tmux['gray']}"
+        set -g @tape_dark "{tmux['dark']}"
+        set -g @tape_void "{tmux['void']}"
+        set -g @tape_active_bg "{tmux['active_bg']}"
+        set -g @tape_active_fg "{tmux['active_fg']}"
 
         # ── Force Refresh Styles ──
-        set -g status-style "bg={tape_bg},fg=#{{@tape_fg}}"
+        set -g status-style "bg={tmux['bg']},fg=#{{@tape_fg}}"
         set -g window-status-activity-style "fg=#{{@tape_orange}},bold"
         set -g window-status-bell-style "fg=#{{@tape_red}},bold,blink"
-        set -g mode-style "bg=#{{@tape_orange}},fg=#{{@tape_dark}},bold"
-        set -g message-style "bg=#{{@tape_dark}},fg=#{{@tape_orange}},border-style=double"
-        set -g message-command-style "bg=#{{@tape_dark}},fg=#{{@tape_orange}}"
-        setw -g pane-active-border-style "fg=#{{@tape_orange}},bg=default"
+        set -g mode-style "bg={tmux['mode_bg']},fg={tmux['mode_fg']},bold"
+        set -g message-style "bg={tmux['message_bg']},fg={tmux['message_fg']},border-style=double"
+        set -g message-command-style "bg={tmux['message_command_bg']},fg={tmux['message_command_fg']}"
+        setw -g pane-active-border-style "fg={tmux['pane_active_fg']},bg=default"
         setw -g pane-border-style "fg=#{{@tape_gray}},bg=default"
 
         # Copy mode styling
-        setw -g mode-style "bg=#{{@tape_orange}},fg=#{{@tape_dark}},bold"
+        setw -g mode-style "bg={tmux['mode_bg']},fg={tmux['mode_fg']},bold"
     """)
 
 

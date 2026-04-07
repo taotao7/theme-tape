@@ -78,6 +78,8 @@ export interface DoctorInfo {
   configHome: DoctorPath;
   dataHome: DoctorPath;
   runtimeDir: DoctorPath;
+  themeTapeConfig: DoctorPath;
+  transparencyMode: TransparencyMode;
   ghosttyConfig: DoctorPath;
   tmuxConfig: DoctorPath;
   tmuxManagedConfig: DoctorPath;
@@ -94,6 +96,11 @@ export interface DoctorInfo {
 
 export type NvimFlavor = "astronvim" | "neovim";
 export type ConfigureTarget = "ghostty" | "tmux" | "nvim" | "yazi" | "all";
+export type TransparencyMode = "auto" | "transparent" | "opaque";
+
+export interface ThemeTapeConfig {
+  transparencyMode: TransparencyMode;
+}
 
 interface ResolvedOptions {
   repoRoot: string;
@@ -120,6 +127,43 @@ export function readState(options: ManagerOptions = {}): ThemeState {
   return {
     theme: resolveThemeId(theme),
     mode: resolveMode(mode),
+  };
+}
+
+export function readThemeTapeConfig(options: ManagerOptions = {}): ThemeTapeConfig {
+  const resolved = resolveOptions(options);
+  const configPath = detectThemeTapeConfigPath(resolved);
+  if (!existsSync(configPath)) {
+    return defaultThemeTapeConfig();
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(configPath, "utf8")) as Partial<ThemeTapeConfig>;
+    return {
+      transparencyMode: resolveTransparencyMode(parsed.transparencyMode),
+    };
+  } catch {
+    return defaultThemeTapeConfig();
+  }
+}
+
+export function writeThemeTapeConfig(
+  config: Partial<ThemeTapeConfig>,
+  options: ManagerOptions = {},
+): {configPath: DoctorPath; config: ThemeTapeConfig} {
+  const resolved = resolveOptions(options);
+  const configPath = detectThemeTapeConfigPath(resolved);
+  const nextConfig: ThemeTapeConfig = {
+    ...readThemeTapeConfig(resolved),
+    ...config,
+    transparencyMode: resolveTransparencyMode(config.transparencyMode ?? readThemeTapeConfig(resolved).transparencyMode),
+  };
+
+  writeManagedFile(configPath, `${JSON.stringify(nextConfig, null, 2)}\n`, resolved);
+
+  return {
+    configPath: createDoctorPath(configPath),
+    config: nextConfig,
   };
 }
 
@@ -280,6 +324,7 @@ export function buildThemes(options: ManagerOptions = {}): OperationResult {
 export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const resolved = resolveOptions(options);
   const state = readState(resolved);
+  const config = readThemeTapeConfig(resolved);
   const ghosttyIntegration = detectGhosttyIntegration(resolved);
   const tmuxIntegration = detectTmuxIntegration(resolved);
   const yaziIntegration = detectYaziIntegration(resolved);
@@ -295,6 +340,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
     configHome: createDoctorPath(resolved.configHome),
     dataHome: createDoctorPath(resolved.dataHome),
     runtimeDir: createDoctorPath(resolved.runtimeDir),
+    themeTapeConfig: createDoctorPath(detectThemeTapeConfigPath(resolved)),
+    transparencyMode: config.transparencyMode,
     ghosttyConfig: createDoctorPath(ghosttyIntegration.configPath),
     tmuxConfig: createDoctorPath(tmuxIntegration.configPath),
     tmuxManagedConfig: createDoctorPath(tmuxIntegration.managedConfigPath),
@@ -343,6 +390,8 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
     `XDG_CONFIG_HOME: ${formatDoctorPath(info.configHome)}`,
     `XDG_DATA_HOME: ${formatDoctorPath(info.dataHome)}`,
     `XDG_RUNTIME_DIR: ${formatDoctorPath(info.runtimeDir)}`,
+    `theme-tape config: ${formatDoctorPath(info.themeTapeConfig)}`,
+    `transparency mode: ${info.transparencyMode}`,
     `ghostty config: ${formatDoctorPath(info.ghosttyConfig)}`,
     `tmux config: ${formatDoctorPath(info.tmuxConfig)}`,
     `tmux managed config: ${formatDoctorPath(info.tmuxManagedConfig)}`,
@@ -384,7 +433,11 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
 export function configureNvim(options: ManagerOptions = {}): {flavor: NvimFlavor; managedConfig: DoctorPath} {
   const resolved = resolveOptions(options);
   const integration = detectNvimIntegration(resolved);
-  const content = integration.flavor === "astronvim" ? renderAstroNvimIntegration() : renderStandardNvimIntegration();
+  const config = readThemeTapeConfig(resolved);
+  const transparency = resolveThemeTransparency(config.transparencyMode);
+  const content = integration.flavor === "astronvim"
+    ? renderAstroNvimIntegration(transparency)
+    : renderStandardNvimIntegration(transparency);
 
   writeManagedFile(integration.managedConfigPath, content, resolved);
 
@@ -397,6 +450,7 @@ export function configureNvim(options: ManagerOptions = {}): {flavor: NvimFlavor
 export function configureGhostty(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
   const resolved = resolveOptions(options);
   const state = readState(resolved);
+  const config = readThemeTapeConfig(resolved);
   const integration = detectGhosttyIntegration(resolved);
   const theme = THEMES[state.theme];
 
@@ -406,6 +460,13 @@ export function configureGhostty(options: ManagerOptions = {}): {managedConfig: 
     `theme = dark:${theme.ghosttyThemeBase}-dark,light:${theme.ghosttyThemeBase}-light`,
     resolved,
   );
+  if (config.transparencyMode === "opaque") {
+    upsertConfigLine(integration.configPath, /^background-opacity\s*=.*$/m, "background-opacity = 1.0", resolved);
+    upsertConfigLine(integration.configPath, /^background-blur-radius\s*=.*$/m, "background-blur-radius = 0", resolved);
+  } else {
+    upsertConfigLine(integration.configPath, /^background-opacity\s*=.*$/m, "background-opacity = 0.92", resolved);
+    upsertConfigLine(integration.configPath, /^background-blur-radius\s*=.*$/m, "background-blur-radius = 20", resolved);
+  }
 
   return {
     managedConfig: createDoctorPath(integration.configPath),
@@ -415,8 +476,9 @@ export function configureGhostty(options: ManagerOptions = {}): {managedConfig: 
 export function configureTmux(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
   const resolved = resolveOptions(options);
   const integration = detectTmuxIntegration(resolved);
+  const config = readThemeTapeConfig(resolved);
 
-  writeManagedFile(integration.managedConfigPath, renderTmuxManagedConfig(), resolved);
+  writeManagedFile(integration.managedConfigPath, renderTmuxManagedConfig(config.transparencyMode), resolved);
   upsertManagedBlock(
     integration.configPath,
     "# theme-tape managed begin",
@@ -461,6 +523,23 @@ export function configureTargets(target: ConfigureTarget = "all", options: Manag
   }
 
   return messages;
+}
+
+export function setTransparencyMode(
+  mode: TransparencyMode,
+  options: ManagerOptions = {},
+): {configPath: DoctorPath; config: ThemeTapeConfig; messages: string[]} {
+  const resolved = resolveOptions(options);
+  const result = writeThemeTapeConfig({transparencyMode: mode}, resolved);
+  const messages = [
+    `Updated transparency mode: ${result.config.transparencyMode}`,
+    ...configureTargets("all", resolved),
+  ];
+
+  return {
+    ...result,
+    messages,
+  };
 }
 
 export function renderYaziThemeToml(themeId: ThemeId): string {
@@ -574,6 +653,36 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function detectThemeTapeConfigPath(options: ResolvedOptions): string {
+  return join(options.configHome, "theme-tape", "config.json");
+}
+
+function defaultThemeTapeConfig(): ThemeTapeConfig {
+  return {
+    transparencyMode: "auto",
+  };
+}
+
+function resolveTransparencyMode(value: string | undefined): TransparencyMode {
+  if (value === "transparent" || value === "opaque" || value === "auto") {
+    return value;
+  }
+
+  return defaultThemeTapeConfig().transparencyMode;
+}
+
+function resolveThemeTransparency(mode: TransparencyMode): {zenith: boolean; cassette: boolean} {
+  if (mode === "transparent") {
+    return {zenith: true, cassette: true};
+  }
+
+  if (mode === "opaque") {
+    return {zenith: false, cassette: false};
+  }
+
+  return {zenith: true, cassette: false};
+}
+
 function detectGhosttyIntegration(options: ResolvedOptions): {
   configRoot: string;
   configPath: string;
@@ -632,7 +741,7 @@ function detectNvimIntegration(options: ResolvedOptions): {
   };
 }
 
-function renderStandardNvimIntegration(): string {
+function renderStandardNvimIntegration(transparency: {zenith: boolean; cassette: boolean}): string {
   return [
     'local function read_state(name, default)',
     '  local path = vim.fn.expand("~/.tmux/" .. name)',
@@ -650,17 +759,17 @@ function renderStandardNvimIntegration(): string {
     'vim.o.background = mode',
     '',
     'if theme == "cassette-futurism" then',
-    '  require("cassette-futurism").setup({ style = mode, transparent = false, dim_inactive = true })',
+    `  require("cassette-futurism").setup({ style = mode, transparent = ${transparency.cassette ? "true" : "false"}, dim_inactive = true })`,
     '  vim.cmd.colorscheme("cassette-futurism")',
     'else',
-    '  require("zenith").setup({ style = mode, transparent = true, dim_inactive = true })',
+    `  require("zenith").setup({ style = mode, transparent = ${transparency.zenith ? "true" : "false"}, dim_inactive = true })`,
     '  vim.cmd.colorscheme("zenith")',
     'end',
     '',
   ].join("\n");
 }
 
-function renderAstroNvimIntegration(): string {
+function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: boolean}): string {
   return [
     'local function read_state(name, default)',
     '  local path = vim.fn.expand("~/.tmux/" .. name)',
@@ -683,10 +792,10 @@ function renderAstroNvimIntegration(): string {
     'local function apply_theme()',
     '  vim.o.background = mode',
     '  if theme == "cassette-futurism" then',
-    '    require("cassette-futurism").setup({ style = mode, transparent = false, dim_inactive = true })',
+    `    require("cassette-futurism").setup({ style = mode, transparent = ${transparency.cassette ? "true" : "false"}, dim_inactive = true })`,
     '    vim.cmd.colorscheme("cassette-futurism")',
     '  else',
-    '    require("zenith").setup({ style = mode, transparent = true, dim_inactive = true })',
+    `    require("zenith").setup({ style = mode, transparent = ${transparency.zenith ? "true" : "false"}, dim_inactive = true })`,
     '    vim.cmd.colorscheme("zenith")',
     '  end',
     'end',
@@ -736,13 +845,18 @@ function renderAstroNvimIntegration(): string {
   ].join("\n");
 }
 
-function renderTmuxManagedConfig(): string {
+function renderTmuxManagedConfig(transparencyMode: TransparencyMode): string {
+  const opacityLine = transparencyMode === "opaque"
+    ? "run-shell 'if [ \"$(cat ~/.tmux/theme_state 2>/dev/null || echo dark)\" = \"dark\" ]; then tmux set -g status-style \"bg=#{@tape_void},fg=#{@tape_fg}\"; fi'"
+    : "run-shell 'if [ \"$(cat ~/.tmux/theme_state 2>/dev/null || echo dark)\" = \"dark\" ]; then tmux set -g status-style \"bg=default,fg=#{@tape_fg}\"; fi'";
+
   return [
     "# theme-tape managed",
     "if-shell \"test ! -f ~/.tmux/theme_state\" \"run-shell 'mkdir -p ~/.tmux && echo dark > ~/.tmux/theme_state'\"",
     `if-shell "test ! -f ~/.tmux/theme_name" "run-shell 'mkdir -p ~/.tmux && echo ${DEFAULT_THEME_ID} > ~/.tmux/theme_name'"`,
     "if-shell \"test -f ~/.tmux/themes/truecolor.conf\" \"source-file ~/.tmux/themes/truecolor.conf\"",
     `run-shell 'theme=$(cat ~/.tmux/theme_name 2>/dev/null || echo ${DEFAULT_THEME_ID}); mode=$(cat ~/.tmux/theme_state 2>/dev/null || echo dark); theme_file="$HOME/.tmux/themes/\${theme}-\${mode}.conf"; if [ -f "$theme_file" ]; then tmux source-file "$theme_file"; fi'`,
+    opacityLine,
     "",
   ].join("\n");
 }

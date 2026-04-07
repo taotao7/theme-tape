@@ -2,7 +2,7 @@ import {afterEach, describe, expect, test} from "bun:test";
 import {mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {applyTheme, configureNvim, configureTargets, installThemeAssets, renderDoctorReport, renderYaziThemeToml} from "../manager";
+import {applyTheme, configureNvim, configureTargets, installThemeAssets, readThemeTapeConfig, renderDoctorReport, renderYaziThemeToml, setTransparencyMode} from "../manager";
 import {REPO_ROOT, resolveThemeId, THEMES, THEME_ORDER} from "../theme-registry";
 
 const created: string[] = [];
@@ -170,5 +170,40 @@ describe("theme-tape manager", () => {
     expect(readFileSync(join(root, ".config/tmux/tmux.conf"), "utf8")).toContain("source-file");
     expect(readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8")).toContain("theme-tape managed");
     expect(readFileSync(join(root, ".config/yazi/theme.toml"), "utf8")).toBe(renderYaziThemeToml("cassette-futurism"));
+  });
+
+  test("stores transparency config and applies opaque mode", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-opacity-"));
+    created.push(root);
+
+    applyTheme("zenith", "dark", undefined, {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const result = setTransparencyMode("opaque", {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    expect(result.config.transparencyMode).toBe("opaque");
+    expect(readThemeTapeConfig({
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    }).transparencyMode).toBe("opaque");
+    expect(readFileSync(join(root, ".config/ghostty/config"), "utf8")).toContain("background-opacity = 1.0");
+    expect(readFileSync(join(root, ".config/nvim/plugin/theme-tape.lua"), "utf8")).toContain('transparent = false');
   });
 });

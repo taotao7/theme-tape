@@ -2,8 +2,8 @@
 import React from "react";
 import {render} from "ink";
 import {App} from "./app";
-import {applyTheme, buildThemes, configureTargets, installThemeAssets, readState, renderDoctorReport} from "./manager";
-import {type ApplyModeInput, type ApplyThemeInput, type ConfigureTarget, type InstallTarget} from "./manager";
+import {applyTheme, buildThemes, configureTargets, installThemeAssets, readState, readThemeTapeConfig, renderDoctorReport, setTransparencyMode} from "./manager";
+import {type ApplyModeInput, type ApplyThemeInput, type ConfigureTarget, type InstallTarget, type TransparencyMode} from "./manager";
 import {resolveComponents} from "./theme-registry";
 
 type Command =
@@ -13,6 +13,7 @@ type Command =
   | {kind: "doctor"}
   | {kind: "build"}
   | {kind: "configure"; target: ConfigureTarget}
+  | {kind: "config"; mode?: TransparencyMode}
   | {kind: "install"; theme: InstallTarget; components: string}
   | {kind: "apply"; theme: ApplyThemeInput; mode: ApplyModeInput; components: string};
 
@@ -36,6 +37,15 @@ function parseArgs(argv: string[]): Command {
 
   if (command === "build") {
     return {kind: "build"};
+  }
+
+  if (command === "config") {
+    const mode = rest[0] as TransparencyMode | undefined;
+    if (mode && !["auto", "transparent", "opaque"].includes(mode)) {
+      throw new Error(`Unknown transparency mode: ${mode}`);
+    }
+
+    return {kind: "config", mode};
   }
 
   if (command === "configure") {
@@ -84,6 +94,7 @@ Usage:
   theme-tape state           Print the persisted theme state
   theme-tape doctor          Print real asset and install paths
   theme-tape build           Regenerate cassette-futurism and zenith outputs
+  theme-tape config [auto|transparent|opaque]
   theme-tape configure [all|ghostty|tmux|nvim|yazi]
   theme-tape install [--theme all|cassette-futurism|zenith] [--components all|ghostty,tmux,nvim,yazi]
   theme-tape apply [--theme toggle|cassette|cassette-futurism|zenith] [--mode toggle|dark|light] [--components all|ghostty,tmux,nvim,yazi]
@@ -116,6 +127,19 @@ async function main() {
 
   if (command.kind === "build") {
     buildThemes({logger: console.log});
+    return;
+  }
+
+  if (command.kind === "config") {
+    if (!command.mode) {
+      console.log(JSON.stringify(readThemeTapeConfig(), null, 2));
+      return;
+    }
+
+    const result = setTransparencyMode(command.mode);
+    for (const message of result.messages) {
+      console.log(message);
+    }
     return;
   }
 

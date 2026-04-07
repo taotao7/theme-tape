@@ -106,8 +106,8 @@ function renderFormula(input: {repo: string; version: string; tag: string; sha25
   depends_on arch: :arm64
 
   def install
-    bin.install "theme-tape/theme-tape"
-    (share/"theme-tape").install "theme-tape/themes"
+    bin.install "theme-tape"
+    (share/"theme-tape").install "themes"
   end
 
   test do

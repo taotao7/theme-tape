@@ -98,6 +98,7 @@ function renderFormula(input: {repo: string; version: string; tag: string; sha25
   return `class ThemeTape < Formula
   desc "Terminal theme switcher for Cassette Futurism and Zenith"
   homepage "https://github.com/${input.repo}"
+  version "${input.version}"
   url "https://github.com/${input.repo}/releases/download/${input.tag}/theme-tape-${input.version}-darwin-arm64.tar.gz"
   sha256 "${input.sha256}"
   license "MIT"

@@ -2,7 +2,7 @@
 import React from "react";
 import {render} from "ink";
 import {App} from "./app";
-import {applyTheme, buildThemes, installThemeAssets, readState} from "./manager";
+import {applyTheme, buildThemes, configureNvim, installThemeAssets, readState, renderDoctorReport} from "./manager";
 import {type ApplyModeInput, type ApplyThemeInput, type InstallTarget} from "./manager";
 import {resolveComponents} from "./theme-registry";
 
@@ -10,9 +10,11 @@ type Command =
   | {kind: "interactive"}
   | {kind: "help"}
   | {kind: "state"}
+  | {kind: "doctor"}
   | {kind: "build"}
-  | {kind: "install"; theme: "all" | "cassette-futurism" | "zenith"; components: string}
-  | {kind: "apply"; theme: "toggle" | "cassette-futurism" | "zenith" | "cassette"; mode: "toggle" | "dark" | "light"; components: string};
+  | {kind: "configure"; target: "nvim"}
+  | {kind: "install"; theme: InstallTarget; components: string}
+  | {kind: "apply"; theme: ApplyThemeInput; mode: ApplyModeInput; components: string};
 
 function parseArgs(argv: string[]): Command {
   const [command, ...rest] = argv;
@@ -28,8 +30,21 @@ function parseArgs(argv: string[]): Command {
     return {kind: "state"};
   }
 
+  if (command === "doctor") {
+    return {kind: "doctor"};
+  }
+
   if (command === "build") {
     return {kind: "build"};
+  }
+
+  if (command === "configure") {
+    const target = rest[0];
+    if (target !== "nvim") {
+      throw new Error(`Unknown configure target: ${target ?? ""}`);
+    }
+
+    return {kind: "configure", target};
   }
 
   if (command === "install") {
@@ -67,7 +82,9 @@ function printHelp() {
 Usage:
   theme-tape                 Launch the Ink TUI
   theme-tape state           Print the persisted theme state
+  theme-tape doctor          Print real asset and install paths
   theme-tape build           Regenerate cassette-futurism and zenith outputs
+  theme-tape configure nvim  Write a managed Neovim/AstroNvim integration file
   theme-tape install [--theme all|cassette-futurism|zenith] [--components all|ghostty,tmux,nvim,yazi]
   theme-tape apply [--theme toggle|cassette|cassette-futurism|zenith] [--mode toggle|dark|light] [--components all|ghostty,tmux,nvim,yazi]
 `);
@@ -92,8 +109,19 @@ async function main() {
     return;
   }
 
+  if (command.kind === "doctor") {
+    console.log(renderDoctorReport());
+    return;
+  }
+
   if (command.kind === "build") {
     buildThemes({logger: console.log});
+    return;
+  }
+
+  if (command.kind === "configure") {
+    const result = configureNvim();
+    console.log(`Configured ${result.flavor}: ${result.managedConfig.path}`);
     return;
   }
 

@@ -1,16 +1,30 @@
-import {existsSync, realpathSync} from "node:fs";
+import {existsSync, readdirSync, readFileSync, realpathSync} from "node:fs";
 import {dirname, join, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 
-export type ThemeId = "cassette-futurism" | "zenith";
+export type ThemeId = string;
 export type Mode = "dark" | "light";
 export type ComponentId = "ghostty" | "tmux" | "nvim" | "yazi";
+
+interface ThemeManifest {
+  id: string;
+  label: string;
+  aliases?: string[];
+  order?: number;
+  ghosttyThemeBase: string;
+  tmuxThemeBase: string;
+  nvimPluginDir: string;
+  nvimColorscheme: string;
+  yaziFlavorBase: string;
+}
 
 export interface ThemeSpec {
   id: ThemeId;
   label: string;
   repoDir: string;
   distDir: string;
+  aliases: string[];
+  order: number;
   ghosttyThemeBase: string;
   tmuxThemeBase: string;
   nvimPluginDir: string;
@@ -22,38 +36,19 @@ const sourceDir = dirname(fileURLToPath(import.meta.url));
 
 export const REPO_ROOT = resolveRepoRoot();
 export const ALL_COMPONENTS: ComponentId[] = ["ghostty", "tmux", "nvim", "yazi"];
-export const THEME_ORDER: ThemeId[] = ["cassette-futurism", "zenith"];
+export const THEMES = loadThemes(REPO_ROOT);
+export const THEME_ORDER = Object.values(THEMES)
+  .sort((left, right) => left.order - right.order || left.label.localeCompare(right.label))
+  .map((theme) => theme.id);
+export const DEFAULT_THEME_ID = THEMES.zenith ? "zenith" : THEME_ORDER[0];
 
-export const THEMES: Record<ThemeId, ThemeSpec> = {
-  "cassette-futurism": {
-    id: "cassette-futurism",
-    label: "Cassette Futurism",
-    repoDir: resolve(REPO_ROOT, "themes/cassette-futurism"),
-    distDir: resolve(REPO_ROOT, "themes/cassette-futurism/dist"),
-    ghosttyThemeBase: "cassette-futurism",
-    tmuxThemeBase: "cassette-futurism",
-    nvimPluginDir: "cassette-futurism.nvim",
-    nvimColorscheme: "cassette-futurism",
-    yaziFlavorBase: "cassette-futurism",
-  },
-  zenith: {
-    id: "zenith",
-    label: "Zenith",
-    repoDir: resolve(REPO_ROOT, "themes/zenith"),
-    distDir: resolve(REPO_ROOT, "themes/zenith/dist"),
-    ghosttyThemeBase: "zenith",
-    tmuxThemeBase: "zenith",
-    nvimPluginDir: "zenith.nvim",
-    nvimColorscheme: "zenith",
-    yaziFlavorBase: "zenith",
-  },
-};
-
-const THEME_ALIASES: Record<string, ThemeId> = {
-  cassette: "cassette-futurism",
-  "cassette-futurism": "cassette-futurism",
-  zenith: "zenith",
-};
+const THEME_ALIASES = Object.values(THEMES).reduce<Record<string, ThemeId>>((aliases, theme) => {
+  aliases[theme.id] = theme.id;
+  for (const alias of theme.aliases) {
+    aliases[alias] = theme.id;
+  }
+  return aliases;
+}, {});
 
 export function resolveThemeId(input: string): ThemeId {
   const theme = THEME_ALIASES[input];
@@ -65,7 +60,16 @@ export function resolveThemeId(input: string): ThemeId {
 }
 
 export function toggleTheme(theme: ThemeId): ThemeId {
-  return theme === "cassette-futurism" ? "zenith" : "cassette-futurism";
+  if (THEME_ORDER.length === 0) {
+    throw new Error("No themes available");
+  }
+
+  const currentIndex = THEME_ORDER.indexOf(theme);
+  if (currentIndex === -1) {
+    return THEME_ORDER[0];
+  }
+
+  return THEME_ORDER[(currentIndex + 1) % THEME_ORDER.length];
 }
 
 export function toggleMode(mode: Mode): Mode {
@@ -142,5 +146,45 @@ function resolveExecutablePath(): string {
 }
 
 function hasThemes(root: string): boolean {
-  return existsSync(join(root, "themes", "cassette-futurism")) && existsSync(join(root, "themes", "zenith"));
+  const themesDir = join(root, "themes");
+  if (!existsSync(themesDir)) {
+    return false;
+  }
+
+  try {
+    return readdirSync(themesDir, {withFileTypes: true}).some(
+      (entry) => entry.isDirectory() && existsSync(join(themesDir, entry.name, "theme.json")),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function loadThemes(root: string): Record<ThemeId, ThemeSpec> {
+  const themesDir = join(root, "themes");
+  const themes = readdirSync(themesDir, {withFileTypes: true})
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => loadTheme(join(themesDir, entry.name)));
+
+  if (themes.length === 0) {
+    throw new Error(`No themes found in ${themesDir}`);
+  }
+
+  return themes.reduce<Record<ThemeId, ThemeSpec>>((registry, theme) => {
+    registry[theme.id] = theme;
+    return registry;
+  }, {});
+}
+
+function loadTheme(themeDir: string): ThemeSpec {
+  const manifestPath = join(themeDir, "theme.json");
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as ThemeManifest;
+
+  return {
+    ...manifest,
+    aliases: manifest.aliases ?? [],
+    order: manifest.order ?? Number.MAX_SAFE_INTEGER,
+    repoDir: themeDir,
+    distDir: join(themeDir, "dist"),
+  };
 }

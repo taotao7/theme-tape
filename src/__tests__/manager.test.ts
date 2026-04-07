@@ -1,9 +1,9 @@
 import {afterEach, describe, expect, test} from "bun:test";
-import {mkdtempSync, readFileSync, realpathSync, rmSync} from "node:fs";
+import {mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {applyTheme, installThemeAssets, renderYaziThemeToml} from "../manager";
-import {REPO_ROOT} from "../theme-registry";
+import {applyTheme, configureNvim, installThemeAssets, renderDoctorReport, renderYaziThemeToml} from "../manager";
+import {REPO_ROOT, resolveThemeId, THEMES, THEME_ORDER} from "../theme-registry";
 
 const created: string[] = [];
 
@@ -17,6 +17,12 @@ afterEach(() => {
 });
 
 describe("theme-tape manager", () => {
+  test("loads themes from theme manifests", () => {
+    expect(THEME_ORDER).toEqual(["zenith", "cassette-futurism"]);
+    expect(THEMES["cassette-futurism"]?.label).toBe("Cassette Futurism");
+    expect(resolveThemeId("cassette")).toBe("cassette-futurism");
+  });
+
   test("installs both theme asset sets", () => {
     const root = mkdtempSync(join(tmpdir(), "theme-tape-install-"));
     created.push(root);
@@ -78,5 +84,61 @@ describe("theme-tape manager", () => {
 
     expect(result.state?.mode).toBe("light");
     expect(readFileSync(join(root, ".tmux/theme_state"), "utf8").trim()).toBe("light");
+  });
+
+  test("doctor reports real nvim paths", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-doctor-"));
+    created.push(root);
+
+    const report = renderDoctorReport({
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      runtimeDir: join(root, ".runtime"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    expect(report).toContain("theme-tape doctor");
+    expect(report).toContain(join(REPO_ROOT, "themes", "zenith", "dist", "nvim", "zenith.nvim"));
+    expect(report).toContain(join(root, ".local", "share", "nvim", "site", "pack", "theme-tape", "start", "zenith.nvim"));
+  });
+
+  test("configures astronvim via plugin spec path", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-astro-"));
+    created.push(root);
+
+    mkdirSync(join(root, ".config/nvim/lua"), {recursive: true});
+    writeFileSync(join(root, ".config/nvim/lua/lazy_setup.lua"), "", "utf8");
+
+    const result = configureNvim({
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    expect(result.flavor).toBe("astronvim");
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('colorscheme = theme');
+  });
+
+  test("configures standard neovim via plugin path", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-nvim-"));
+    created.push(root);
+
+    const result = configureNvim({
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    expect(result.flavor).toBe("neovim");
+    expect(readFileSync(join(root, ".config/nvim/plugin/theme-tape.lua"), "utf8")).toContain('vim.opt.runtimepath:append(theme_root .. "/zenith.nvim")');
   });
 });

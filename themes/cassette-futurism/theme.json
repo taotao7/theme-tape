@@ -1,0 +1,11 @@
+{
+  "id": "cassette-futurism",
+  "label": "Cassette Futurism",
+  "aliases": ["cassette"],
+  "order": 2,
+  "ghosttyThemeBase": "cassette-futurism",
+  "tmuxThemeBase": "cassette-futurism",
+  "nvimPluginDir": "cassette-futurism.nvim",
+  "nvimColorscheme": "cassette-futurism",
+  "yaziFlavorBase": "cassette-futurism"
+}

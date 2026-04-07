@@ -1,0 +1,10 @@
+{
+  "id": "zenith",
+  "label": "Zenith",
+  "order": 1,
+  "ghosttyThemeBase": "zenith",
+  "tmuxThemeBase": "zenith",
+  "nvimPluginDir": "zenith.nvim",
+  "nvimColorscheme": "zenith",
+  "yaziFlavorBase": "zenith"
+}

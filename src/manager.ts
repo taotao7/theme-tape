@@ -78,8 +78,13 @@ export interface DoctorInfo {
   configHome: DoctorPath;
   dataHome: DoctorPath;
   runtimeDir: DoctorPath;
+  ghosttyConfig: DoctorPath;
+  tmuxConfig: DoctorPath;
+  tmuxManagedConfig: DoctorPath;
   tmuxStateFile: DoctorPath;
   tmuxThemeNameFile: DoctorPath;
+  yaziConfigRoot: DoctorPath;
+  yaziThemeFile: DoctorPath;
   nvimConfigRoot: DoctorPath;
   nvimFlavor: NvimFlavor;
   nvimManagedConfig: DoctorPath;
@@ -88,6 +93,7 @@ export interface DoctorInfo {
 }
 
 export type NvimFlavor = "astronvim" | "neovim";
+export type ConfigureTarget = "ghostty" | "tmux" | "nvim" | "yazi" | "all";
 
 interface ResolvedOptions {
   repoRoot: string;
@@ -167,6 +173,21 @@ export function installThemeAssets(
   if (components.includes("nvim")) {
     const integration = configureNvim(resolved);
     messages.push(`Neovim config ready for ${integration.flavor}: ${integration.managedConfig.path}`);
+  }
+
+  if (components.includes("ghostty")) {
+    const integration = configureGhostty(resolved);
+    messages.push(`Ghostty config ready: ${integration.managedConfig.path}`);
+  }
+
+  if (components.includes("tmux")) {
+    const integration = configureTmux(resolved);
+    messages.push(`Tmux config ready: ${integration.managedConfig.path}`);
+  }
+
+  if (components.includes("yazi")) {
+    const integration = configureYazi(resolved);
+    messages.push(`Yazi config ready: ${integration.managedConfig.path}`);
   }
 
   for (const message of messages) {
@@ -259,6 +280,9 @@ export function buildThemes(options: ManagerOptions = {}): OperationResult {
 export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const resolved = resolveOptions(options);
   const state = readState(resolved);
+  const ghosttyIntegration = detectGhosttyIntegration(resolved);
+  const tmuxIntegration = detectTmuxIntegration(resolved);
+  const yaziIntegration = detectYaziIntegration(resolved);
   const integration = detectNvimIntegration(resolved);
   const ghosttyThemesDir = join(resolved.configHome, "ghostty", "themes");
   const tmuxThemesDir = join(resolved.homeDir, ".tmux", "themes");
@@ -271,8 +295,13 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
     configHome: createDoctorPath(resolved.configHome),
     dataHome: createDoctorPath(resolved.dataHome),
     runtimeDir: createDoctorPath(resolved.runtimeDir),
+    ghosttyConfig: createDoctorPath(ghosttyIntegration.configPath),
+    tmuxConfig: createDoctorPath(tmuxIntegration.configPath),
+    tmuxManagedConfig: createDoctorPath(tmuxIntegration.managedConfigPath),
     tmuxStateFile: createDoctorPath(join(resolved.homeDir, ".tmux", "theme_state")),
     tmuxThemeNameFile: createDoctorPath(join(resolved.homeDir, ".tmux", "theme_name")),
+    yaziConfigRoot: createDoctorPath(yaziIntegration.configRoot),
+    yaziThemeFile: createDoctorPath(yaziIntegration.themePath),
     nvimConfigRoot: createDoctorPath(integration.configRoot),
     nvimFlavor: integration.flavor,
     nvimManagedConfig: createDoctorPath(integration.managedConfigPath),
@@ -314,8 +343,13 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
     `XDG_CONFIG_HOME: ${formatDoctorPath(info.configHome)}`,
     `XDG_DATA_HOME: ${formatDoctorPath(info.dataHome)}`,
     `XDG_RUNTIME_DIR: ${formatDoctorPath(info.runtimeDir)}`,
+    `ghostty config: ${formatDoctorPath(info.ghosttyConfig)}`,
+    `tmux config: ${formatDoctorPath(info.tmuxConfig)}`,
+    `tmux managed config: ${formatDoctorPath(info.tmuxManagedConfig)}`,
     `tmux theme_state: ${formatDoctorPath(info.tmuxStateFile)}`,
     `tmux theme_name: ${formatDoctorPath(info.tmuxThemeNameFile)}`,
+    `yazi config root: ${formatDoctorPath(info.yaziConfigRoot)}`,
+    `yazi theme.toml: ${formatDoctorPath(info.yaziThemeFile)}`,
     `nvim config root: ${formatDoctorPath(info.nvimConfigRoot)}`,
     `nvim flavor: ${info.nvimFlavor}`,
     `nvim managed config: ${formatDoctorPath(info.nvimManagedConfig)}`,
@@ -358,6 +392,75 @@ export function configureNvim(options: ManagerOptions = {}): {flavor: NvimFlavor
     flavor: integration.flavor,
     managedConfig: createDoctorPath(integration.managedConfigPath),
   };
+}
+
+export function configureGhostty(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
+  const resolved = resolveOptions(options);
+  const state = readState(resolved);
+  const integration = detectGhosttyIntegration(resolved);
+  const theme = THEMES[state.theme];
+
+  upsertConfigLine(
+    integration.configPath,
+    /^theme\s*=.*$/m,
+    `theme = dark:${theme.ghosttyThemeBase}-dark,light:${theme.ghosttyThemeBase}-light`,
+    resolved,
+  );
+
+  return {
+    managedConfig: createDoctorPath(integration.configPath),
+  };
+}
+
+export function configureTmux(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
+  const resolved = resolveOptions(options);
+  const integration = detectTmuxIntegration(resolved);
+
+  writeManagedFile(integration.managedConfigPath, renderTmuxManagedConfig(), resolved);
+  upsertManagedBlock(
+    integration.configPath,
+    "# theme-tape managed begin",
+    "# theme-tape managed end",
+    `source-file ${integration.managedConfigPath}`,
+    resolved,
+  );
+
+  return {
+    managedConfig: createDoctorPath(integration.managedConfigPath),
+  };
+}
+
+export function configureYazi(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
+  const resolved = resolveOptions(options);
+  const state = readState(resolved);
+  const integration = detectYaziIntegration(resolved);
+
+  writeManagedFile(integration.themePath, renderYaziThemeToml(state.theme), resolved);
+
+  return {
+    managedConfig: createDoctorPath(integration.themePath),
+  };
+}
+
+export function configureTargets(target: ConfigureTarget = "all", options: ManagerOptions = {}): string[] {
+  const resolved = resolveOptions(options);
+  const targets = target === "all" ? ALL_COMPONENTS : [target];
+  const messages: string[] = [];
+
+  for (const component of targets) {
+    if (component === "ghostty") {
+      messages.push(`Configured ghostty: ${configureGhostty(resolved).managedConfig.path}`);
+    } else if (component === "tmux") {
+      messages.push(`Configured tmux: ${configureTmux(resolved).managedConfig.path}`);
+    } else if (component === "nvim") {
+      const result = configureNvim(resolved);
+      messages.push(`Configured ${result.flavor}: ${result.managedConfig.path}`);
+    } else if (component === "yazi") {
+      messages.push(`Configured yazi: ${configureYazi(resolved).managedConfig.path}`);
+    }
+  }
+
+  return messages;
 }
 
 export function renderYaziThemeToml(themeId: ThemeId): string {
@@ -407,6 +510,25 @@ function upsertConfigLine(filePath: string, matcher: RegExp, replacement: string
   writeManagedFile(filePath, next, options);
 }
 
+function upsertManagedBlock(
+  filePath: string,
+  startMarker: string,
+  endMarker: string,
+  body: string,
+  options: ResolvedOptions,
+): void {
+  const current = existsSync(filePath) ? readFileSync(filePath, "utf8") : "";
+  const block = `${startMarker}\n${body}\n${endMarker}`;
+  const escapedStart = escapeRegExp(startMarker);
+  const escapedEnd = escapeRegExp(endMarker);
+  const matcher = new RegExp(`${escapedStart}[\\s\\S]*?${escapedEnd}`, "m");
+  const next = matcher.test(current)
+    ? current.replace(matcher, block)
+    : `${current.replace(/\s*$/, "")}${current.trim().length > 0 ? "\n\n" : ""}${block}\n`;
+
+  writeManagedFile(filePath, next, options);
+}
+
 function linkPath(source: string, target: string, options: ResolvedOptions): void {
   if (!existsSync(source)) {
     throw new Error(`Missing generated asset: ${source}`);
@@ -446,6 +568,45 @@ function createDoctorPath(path: string): DoctorPath {
 
 function formatDoctorPath(item: DoctorPath): string {
   return `${item.path} (${item.exists ? "exists" : "missing"})`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function detectGhosttyIntegration(options: ResolvedOptions): {
+  configRoot: string;
+  configPath: string;
+} {
+  const configRoot = join(options.configHome, "ghostty");
+  return {
+    configRoot,
+    configPath: join(configRoot, "config"),
+  };
+}
+
+function detectTmuxIntegration(options: ResolvedOptions): {
+  configPath: string;
+  managedConfigPath: string;
+} {
+  const xdgConfigPath = join(options.configHome, "tmux", "tmux.conf");
+  const homeConfigPath = join(options.homeDir, ".tmux.conf");
+
+  return {
+    configPath: existsSync(xdgConfigPath) || !existsSync(homeConfigPath) ? xdgConfigPath : homeConfigPath,
+    managedConfigPath: join(options.homeDir, ".tmux", "theme-tape.conf"),
+  };
+}
+
+function detectYaziIntegration(options: ResolvedOptions): {
+  configRoot: string;
+  themePath: string;
+} {
+  const configRoot = join(options.configHome, "yazi");
+  return {
+    configRoot,
+    themePath: join(configRoot, "theme.toml"),
+  };
 }
 
 function detectNvimIntegration(options: ResolvedOptions): {
@@ -512,6 +673,24 @@ function renderAstroNvimIntegration(): string {
     'local mode = read_state("theme_state", "dark")',
     'local theme_root = vim.fn.stdpath("data") .. "/site/pack/theme-tape/start"',
     '',
+    'local function current_status_color()',
+    '  if theme == "cassette-futurism" then',
+    '    return mode == "light" and "#d65d0e" or "#ffb86c"',
+    '  end',
+    '  return "#b070e8"',
+    'end',
+    '',
+    'local function apply_theme()',
+    '  vim.o.background = mode',
+    '  if theme == "cassette-futurism" then',
+    '    require("cassette-futurism").setup({ style = mode, transparent = false, dim_inactive = true })',
+    '    vim.cmd.colorscheme("cassette-futurism")',
+    '  else',
+    '    require("zenith").setup({ style = mode, transparent = true, dim_inactive = true })',
+    '    vim.cmd.colorscheme("zenith")',
+    '  end',
+    'end',
+    '',
     'return {',
     '  {',
     '    dir = theme_root .. "/zenith.nvim",',
@@ -519,10 +698,7 @@ function renderAstroNvimIntegration(): string {
     '    lazy = false,',
     '    priority = 1000,',
     '    config = function()',
-    '      if theme ~= "zenith" then return end',
-    '      vim.o.background = mode',
-    '      require("zenith").setup({ style = mode, transparent = true, dim_inactive = true })',
-    '      vim.cmd.colorscheme("zenith")',
+    '      if theme == "zenith" then apply_theme() end',
     '    end,',
     '  },',
     '  {',
@@ -531,20 +707,43 @@ function renderAstroNvimIntegration(): string {
     '    lazy = false,',
     '    priority = 1000,',
     '    config = function()',
-    '      if theme ~= "cassette-futurism" then return end',
-    '      vim.o.background = mode',
-    '      require("cassette-futurism").setup({ style = mode, transparent = false, dim_inactive = true })',
-    '      vim.cmd.colorscheme("cassette-futurism")',
+    '      if theme == "cassette-futurism" then apply_theme() end',
     '    end,',
     '  },',
     '  {',
     '    "AstroNvim/astroui",',
-    '    opts = {',
-    '      colorscheme = theme,',
-    '    },',
+    '    opts = function(_, opts)',
+    '      opts.colorscheme = theme',
+    '      opts.status = opts.status or {}',
+    '      local prev_colors = opts.status.colors',
+    '      opts.status.colors = function(colors)',
+    '        if type(prev_colors) == "function" then',
+    '          colors = prev_colors(colors) or colors',
+    '        end',
+    '        colors.normal = current_status_color()',
+    '        colors.bg = "NONE"',
+    '        colors.section_bg = "NONE"',
+    '        return colors',
+    '      end',
+    '    end,',
+    '  },',
+    '  {',
+    '    "f-person/auto-dark-mode.nvim",',
+    '    enabled = false,',
     '  },',
     '}',
     '',
+  ].join("\n");
+}
+
+function renderTmuxManagedConfig(): string {
+  return [
+    "# theme-tape managed",
+    "if-shell \"test ! -f ~/.tmux/theme_state\" \"run-shell 'mkdir -p ~/.tmux && echo dark > ~/.tmux/theme_state'\"",
+    `if-shell "test ! -f ~/.tmux/theme_name" "run-shell 'mkdir -p ~/.tmux && echo ${DEFAULT_THEME_ID} > ~/.tmux/theme_name'"`,
+    "if-shell \"test -f ~/.tmux/themes/truecolor.conf\" \"source-file ~/.tmux/themes/truecolor.conf\"",
+    `run-shell 'theme=$(cat ~/.tmux/theme_name 2>/dev/null || echo ${DEFAULT_THEME_ID}); mode=$(cat ~/.tmux/theme_state 2>/dev/null || echo dark); theme_file="$HOME/.tmux/themes/\${theme}-\${mode}.conf"; if [ -f "$theme_file" ]; then tmux source-file "$theme_file"; fi'`,
+    "",
   ].join("\n");
 }
 
@@ -575,7 +774,8 @@ function reloadTmux(themeId: ThemeId, mode: Mode, options: ResolvedOptions, mess
     return;
   }
 
-  spawnSync("tmux", ["source-file", join(options.homeDir, ".tmux.conf")], {stdio: "ignore"});
+  const integration = detectTmuxIntegration(options);
+  spawnSync("tmux", ["source-file", integration.configPath], {stdio: "ignore"});
   const label = `${themeId.toUpperCase()} ${mode.toUpperCase()}`;
   spawnSync("tmux", ["display-message", ` ${label}`], {stdio: "ignore"});
   messages.push(`Tmux switched to ${themeId}`);

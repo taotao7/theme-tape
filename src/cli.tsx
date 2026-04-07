@@ -2,8 +2,8 @@
 import React from "react";
 import {render} from "ink";
 import {App} from "./app";
-import {applyTheme, buildThemes, configureNvim, installThemeAssets, readState, renderDoctorReport} from "./manager";
-import {type ApplyModeInput, type ApplyThemeInput, type InstallTarget} from "./manager";
+import {applyTheme, buildThemes, configureTargets, installThemeAssets, readState, renderDoctorReport} from "./manager";
+import {type ApplyModeInput, type ApplyThemeInput, type ConfigureTarget, type InstallTarget} from "./manager";
 import {resolveComponents} from "./theme-registry";
 
 type Command =
@@ -12,7 +12,7 @@ type Command =
   | {kind: "state"}
   | {kind: "doctor"}
   | {kind: "build"}
-  | {kind: "configure"; target: "nvim"}
+  | {kind: "configure"; target: ConfigureTarget}
   | {kind: "install"; theme: InstallTarget; components: string}
   | {kind: "apply"; theme: ApplyThemeInput; mode: ApplyModeInput; components: string};
 
@@ -39,8 +39,8 @@ function parseArgs(argv: string[]): Command {
   }
 
   if (command === "configure") {
-    const target = rest[0];
-    if (target !== "nvim") {
+    const target = (rest[0] ?? "all") as ConfigureTarget;
+    if (!["all", "ghostty", "tmux", "nvim", "yazi"].includes(target)) {
       throw new Error(`Unknown configure target: ${target ?? ""}`);
     }
 
@@ -84,7 +84,7 @@ Usage:
   theme-tape state           Print the persisted theme state
   theme-tape doctor          Print real asset and install paths
   theme-tape build           Regenerate cassette-futurism and zenith outputs
-  theme-tape configure nvim  Write a managed Neovim/AstroNvim integration file
+  theme-tape configure [all|ghostty|tmux|nvim|yazi]
   theme-tape install [--theme all|cassette-futurism|zenith] [--components all|ghostty,tmux,nvim,yazi]
   theme-tape apply [--theme toggle|cassette|cassette-futurism|zenith] [--mode toggle|dark|light] [--components all|ghostty,tmux,nvim,yazi]
 `);
@@ -120,8 +120,9 @@ async function main() {
   }
 
   if (command.kind === "configure") {
-    const result = configureNvim();
-    console.log(`Configured ${result.flavor}: ${result.managedConfig.path}`);
+    for (const message of configureTargets(command.target)) {
+      console.log(message);
+    }
     return;
   }
 

@@ -2,7 +2,7 @@ import {afterEach, describe, expect, test} from "bun:test";
 import {mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {applyTheme, configureNvim, installThemeAssets, renderDoctorReport, renderYaziThemeToml} from "../manager";
+import {applyTheme, configureNvim, configureTargets, installThemeAssets, renderDoctorReport, renderYaziThemeToml} from "../manager";
 import {REPO_ROOT, resolveThemeId, THEMES, THEME_ORDER} from "../theme-registry";
 
 const created: string[] = [];
@@ -123,6 +123,7 @@ describe("theme-tape manager", () => {
 
     expect(result.flavor).toBe("astronvim");
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('colorscheme = theme');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('"f-person/auto-dark-mode.nvim"');
   });
 
   test("configures standard neovim via plugin path", () => {
@@ -140,5 +141,34 @@ describe("theme-tape manager", () => {
 
     expect(result.flavor).toBe("neovim");
     expect(readFileSync(join(root, ".config/nvim/plugin/theme-tape.lua"), "utf8")).toContain('vim.opt.runtimepath:append(theme_root .. "/zenith.nvim")');
+  });
+
+  test("configures ghostty tmux and yazi paths dynamically", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-configure-"));
+    created.push(root);
+
+    applyTheme("cassette-futurism", "light", undefined, {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const messages = configureTargets("all", {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    expect(messages.some((message) => message.includes("Configured ghostty"))).toBe(true);
+    expect(readFileSync(join(root, ".config/ghostty/config"), "utf8")).toContain("theme = dark:cassette-futurism-dark,light:cassette-futurism-light");
+    expect(readFileSync(join(root, ".config/tmux/tmux.conf"), "utf8")).toContain("source-file");
+    expect(readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8")).toContain("theme-tape managed");
+    expect(readFileSync(join(root, ".config/yazi/theme.toml"), "utf8")).toBe(renderYaziThemeToml("cassette-futurism"));
   });
 });

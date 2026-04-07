@@ -1,4 +1,4 @@
-import {mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {cpSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {dirname, join, resolve} from "node:path";
 import {spawnSync} from "node:child_process";
@@ -15,9 +15,15 @@ const publish = process.argv.includes("--publish");
 const tag = `theme-tape-v${version}`;
 const archiveName = `theme-tape-${version}-darwin-arm64.tar.gz`;
 const archivePath = join(appRoot, "dist", archiveName);
+const packageRoot = mkdtempSync(join(tmpdir(), "theme-tape-package-"));
+const payloadDir = join(packageRoot, "theme-tape");
 
 run("bun", ["run", "build"], appRoot);
-run("tar", ["-czf", archivePath, "-C", join(appRoot, "dist"), "theme-tape"], appRoot);
+mkdirSync(payloadDir, {recursive: true});
+cpSync(join(appRoot, "dist", "theme-tape"), join(payloadDir, "theme-tape"));
+cpSync(join(appRoot, "themes"), join(payloadDir, "themes"), {recursive: true});
+run("tar", ["-czf", archivePath, "-C", packageRoot, "theme-tape"], appRoot);
+rmSync(packageRoot, {recursive: true, force: true});
 
 const sha256 = capture("shasum", ["-a", "256", archivePath], appRoot).split(/\s+/)[0];
 
@@ -100,7 +106,8 @@ function renderFormula(input: {repo: string; version: string; tag: string; sha25
   depends_on arch: :arm64
 
   def install
-    bin.install "theme-tape"
+    bin.install "theme-tape/theme-tape"
+    (share/"theme-tape").install "theme-tape/themes"
   end
 
   test do

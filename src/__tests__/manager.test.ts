@@ -53,4 +53,30 @@ describe("theme-tape manager", () => {
     expect(readFileSync(join(root, ".config/ghostty/config"), "utf8")).toContain("theme = dark:zenith-dark,light:zenith-light");
     expect(readFileSync(join(root, ".config/yazi/theme.toml"), "utf8")).toBe(renderYaziThemeToml("zenith"));
   });
+
+  test("toggle mode flips the saved mode", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-toggle-"));
+    created.push(root);
+
+    applyTheme("cassette-futurism", "dark", undefined, {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const result = applyTheme("cassette-futurism", "toggle", undefined, {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    expect(result.state?.mode).toBe("light");
+    expect(readFileSync(join(root, ".tmux/theme_state"), "utf8").trim()).toBe("light");
+  });
 });

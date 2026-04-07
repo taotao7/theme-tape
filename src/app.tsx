@@ -1,9 +1,9 @@
 import React, {useMemo, useState} from "react";
 import {Box, Text, useApp, useInput} from "ink";
-import {applyTheme, buildThemes, installThemeAssets, readState} from "./manager";
+import {type ApplyModeInput, applyTheme, buildThemes, installThemeAssets, readState} from "./manager";
 import {THEME_ORDER, type ThemeId, THEMES, type Mode} from "./theme-registry";
 
-const MODES: Mode[] = ["dark", "light"];
+const MODES: ApplyModeInput[] = ["dark", "light", "toggle"];
 const ACTIONS = ["Apply theme", "Install assets", "Build outputs", "Quit"] as const;
 type Focus = "theme" | "mode" | "action";
 
@@ -12,7 +12,7 @@ export function App() {
   const initialState = useMemo(() => readState(), []);
   const [current, setCurrent] = useState(initialState);
   const [themeIndex, setThemeIndex] = useState(THEME_ORDER.indexOf(initialState.theme));
-  const [modeIndex, setModeIndex] = useState(MODES.indexOf(initialState.mode));
+  const [modeIndex, setModeIndex] = useState(modeIndexFor(initialState.mode));
   const [actionIndex, setActionIndex] = useState(0);
   const [focus, setFocus] = useState<Focus>("action");
   const [busy, setBusy] = useState(false);
@@ -71,7 +71,7 @@ export function App() {
   });
 
   const selectedTheme = THEME_ORDER[themeIndex] as ThemeId;
-  const selectedMode = MODES[modeIndex] as Mode;
+  const selectedMode = MODES[modeIndex] as ApplyModeInput;
 
   async function runAction() {
     const action = ACTIONS[actionIndex];
@@ -122,11 +122,12 @@ export function App() {
       <Box marginTop={1} flexDirection="column">
         <Text color="cyan">Shortcuts</Text>
         <Text>Tab cycle focus · j/k move section · q quit</Text>
+        <Text color="gray">Mode=toggle switches dark/light from the current saved state.</Text>
       </Box>
       <Box marginTop={1} flexDirection="column">
         <Text color={busy ? "yellow" : "green"}>{busy ? "Working..." : "Status"}</Text>
-        {lines.map((line) => (
-          <Text key={line}>{line}</Text>
+        {lines.map((line, index) => (
+          <Text key={`${index}:${line}`}>{line}</Text>
         ))}
       </Box>
     </Box>
@@ -139,4 +140,8 @@ function Selector(props: {focused: boolean; label: string; value: string; hint: 
       {props.focused ? ">" : " "} {props.label}: {props.value} <Text color="gray">({props.hint})</Text>
     </Text>
   );
+}
+
+function modeIndexFor(mode: Mode): number {
+  return MODES.indexOf(mode);
 }

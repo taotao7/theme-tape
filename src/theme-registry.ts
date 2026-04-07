@@ -1,4 +1,5 @@
-import {dirname, resolve} from "node:path";
+import {existsSync, realpathSync} from "node:fs";
+import {dirname, join, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 
 export type ThemeId = "cassette-futurism" | "zenith";
@@ -19,7 +20,7 @@ export interface ThemeSpec {
 
 const sourceDir = dirname(fileURLToPath(import.meta.url));
 
-export const REPO_ROOT = resolve(sourceDir, "..");
+export const REPO_ROOT = resolveRepoRoot();
 export const ALL_COMPONENTS: ComponentId[] = ["ghostty", "tmux", "nvim", "yazi"];
 export const THEME_ORDER: ThemeId[] = ["cassette-futurism", "zenith"];
 
@@ -100,4 +101,46 @@ export function resolveComponents(raw?: string): ComponentId[] {
   }
 
   return components as ComponentId[];
+}
+
+function resolveRepoRoot(): string {
+  const envRoot = process.env.THEME_TAPE_ROOT;
+  if (envRoot && hasThemes(envRoot)) {
+    return envRoot;
+  }
+
+  const executablePath = resolveExecutablePath();
+  const executableRoot = resolve(executablePath, "..", "..");
+  if (hasThemes(executableRoot)) {
+    return executableRoot;
+  }
+
+  const homebrewRoot = join(executableRoot, "share", "theme-tape");
+  if (hasThemes(homebrewRoot)) {
+    return homebrewRoot;
+  }
+
+  const cwdRoot = process.cwd();
+  if (hasThemes(cwdRoot)) {
+    return cwdRoot;
+  }
+
+  const sourceRoot = resolve(sourceDir, "..");
+  if (hasThemes(sourceRoot)) {
+    return sourceRoot;
+  }
+
+  return sourceRoot;
+}
+
+function resolveExecutablePath(): string {
+  try {
+    return realpathSync(process.execPath);
+  } catch {
+    return process.execPath;
+  }
+}
+
+function hasThemes(root: string): boolean {
+  return existsSync(join(root, "themes", "cassette-futurism")) && existsSync(join(root, "themes", "zenith"));
 }

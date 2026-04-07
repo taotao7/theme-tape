@@ -2,9 +2,23 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-
-if [ -x "$SCRIPT_DIR/dist/theme-tape" ]; then
-  exec "$SCRIPT_DIR/dist/theme-tape" apply --theme "${1:-toggle}" --mode "${2:-toggle}"
+CURRENT_THEME="zenith"
+if [ -f "$HOME/.tmux/theme_name" ] && [ -s "$HOME/.tmux/theme_name" ]; then
+  CURRENT_THEME="$(cat "$HOME/.tmux/theme_name")"
 fi
 
-exec bun --cwd "$SCRIPT_DIR" run src/cli.tsx apply --theme "${1:-toggle}" --mode "${2:-toggle}"
+THEME_ARG="${1:-toggle}"
+MODE_ARG="${2:-toggle}"
+
+case "${1:-}" in
+  dark|light)
+    THEME_ARG="$CURRENT_THEME"
+    MODE_ARG="$1"
+    ;;
+esac
+
+if [ -x "$SCRIPT_DIR/dist/theme-tape" ]; then
+  exec "$SCRIPT_DIR/dist/theme-tape" apply --theme "$THEME_ARG" --mode "$MODE_ARG"
+fi
+
+exec bun --cwd "$SCRIPT_DIR" run src/cli.tsx apply --theme "$THEME_ARG" --mode "$MODE_ARG"

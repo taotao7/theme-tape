@@ -479,6 +479,7 @@ export function configureTmux(options: ManagerOptions = {}): {managedConfig: Doc
   const config = readThemeTapeConfig(resolved);
 
   writeManagedFile(integration.managedConfigPath, renderTmuxManagedConfig(config.transparencyMode), resolved);
+  cleanupLegacyTmuxConfig(integration.configPath, resolved);
   upsertManagedBlock(
     integration.configPath,
     "# theme-tape managed begin",
@@ -606,6 +607,22 @@ function upsertManagedBlock(
     : `${current.replace(/\s*$/, "")}${current.trim().length > 0 ? "\n\n" : ""}${block}\n`;
 
   writeManagedFile(filePath, next, options);
+}
+
+function cleanupLegacyTmuxConfig(filePath: string, options: ResolvedOptions): void {
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  const current = readFileSync(filePath, "utf8");
+  const next = current
+    .replace(/^if-shell "test ! -f ~\/\.tmux\/theme_state" "run-shell 'echo dark > ~\/\.tmux\/theme_state'"\n?/m, "")
+    .replace(/^if-shell "grep -q dark ~\/\.tmux\/theme_state" "source-file ~\/\.tmux\/themes\/zenith-dark\.conf" "source-file ~\/\.tmux\/themes\/zenith-light\.conf"\n?/m, "")
+    .replace(/\n{3,}/g, "\n\n");
+
+  if (next !== current) {
+    writeManagedFile(filePath, next, options);
+  }
 }
 
 function linkPath(source: string, target: string, options: ResolvedOptions): void {
@@ -788,7 +805,22 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
     'local mode = read_state("theme_state", "dark")',
     'local theme_root = vim.fn.stdpath("data") .. "/site/pack/theme-tape/start"',
     '',
+    'local function refresh_state()',
+    '  theme = read_state("theme_name", theme)',
+    '  mode = read_state("theme_state", mode)',
+    'end',
+    '',
+    'local function reload_tmux_theme()',
+    '  local tmux_config = vim.fn.expand("~/.tmux/theme-tape.conf")',
+    '  if vim.fn.executable("tmux") ~= 1 or vim.fn.filereadable(tmux_config) ~= 1 then return end',
+    '  vim.fn.system({ "tmux", "list-sessions" })',
+    '  if vim.v.shell_error == 0 then',
+    '    vim.fn.system({ "tmux", "source-file", tmux_config })',
+    '  end',
+    'end',
+    '',
     'local function current_status_color()',
+    '  refresh_state()',
     '  if theme == "cassette-futurism" then',
     '    return mode == "light" and "#d65d0e" or "#ffb86c"',
     '  end',
@@ -796,10 +828,12 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
     'end',
     '',
     'local function apply_theme(next_mode)',
+    '  refresh_state()',
     '  if next_mode ~= nil then',
     '    mode = next_mode',
     '  end',
     '  vim.o.background = mode',
+    '  write_state("theme_name", theme)',
     '  write_state("theme_state", mode)',
     '  if theme == "cassette-futurism" then',
     `    require("cassette-futurism").setup({ style = mode, transparent = ${transparency.cassette ? "true" : "false"}, dim_inactive = true })`,
@@ -808,6 +842,7 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
     `    require("zenith").setup({ style = mode, transparent = ${transparency.zenith ? "true" : "false"}, dim_inactive = true })`,
     '    vim.cmd.colorscheme("zenith")',
     '  end',
+    '  reload_tmux_theme()',
     'end',
     '',
     'return {',
@@ -817,7 +852,7 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
     '    lazy = false,',
     '    priority = 1000,',
     '    config = function()',
-    '      if theme == "zenith" then apply_theme() end',
+    '      if read_state("theme_name", "zenith") == "zenith" then apply_theme() end',
     '    end,',
     '  },',
     '  {',
@@ -826,13 +861,13 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
     '    lazy = false,',
     '    priority = 1000,',
     '    config = function()',
-    '      if theme == "cassette-futurism" then apply_theme() end',
+    '      if read_state("theme_name", "zenith") == "cassette-futurism" then apply_theme() end',
     '    end,',
     '  },',
     '  {',
     '    "AstroNvim/astroui",',
     '    opts = function(_, opts)',
-    '      opts.colorscheme = theme',
+    '      opts.colorscheme = read_state("theme_name", theme)',
     '      opts.status = opts.status or {}',
     '      local prev_colors = opts.status.colors',
     '      opts.status.colors = function(colors)',
@@ -865,17 +900,24 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
 }
 
 function renderTmuxManagedConfig(transparencyMode: TransparencyMode): string {
-  const opacityLine = transparencyMode === "opaque"
-    ? "run-shell 'if [ \"$(cat ~/.tmux/theme_state 2>/dev/null || echo dark)\" = \"dark\" ]; then tmux set -g status-style \"bg=#{@tape_void},fg=#{@tape_fg}\"; fi'"
-    : "run-shell 'if [ \"$(cat ~/.tmux/theme_state 2>/dev/null || echo dark)\" = \"dark\" ]; then tmux set -g status-style \"bg=default,fg=#{@tape_fg}\"; fi'";
+  const transparent = transparencyMode !== "opaque";
+  const statusStyle = transparent ? "bg=default,fg=#{@tape_fg}" : "bg=#{@tape_bg},fg=#{@tape_fg}";
+  const emptyModeStyle = transparent ? "fg=#{@tape_purple},bold" : "bg=#{@tape_purple},fg=#{@tape_dark},bold";
+  const applyThemeAndOverrides = [
+    "theme=$(cat ~/.tmux/theme_name 2>/dev/null || echo zenith)",
+    "mode=$(cat ~/.tmux/theme_state 2>/dev/null || echo dark)",
+    "theme_file=\"$HOME/.tmux/themes/${theme}-${mode}.conf\"",
+    "if [ -f \"$theme_file\" ]; then tmux source-file \"$theme_file\"; fi",
+    `tmux set -g status-style "${statusStyle}"`,
+    `tmux set -g @mode_indicator_empty_mode_style "${emptyModeStyle}"`,
+  ].join("; ");
 
   return [
     "# theme-tape managed",
     "if-shell \"test ! -f ~/.tmux/theme_state\" \"run-shell 'mkdir -p ~/.tmux && echo dark > ~/.tmux/theme_state'\"",
     `if-shell "test ! -f ~/.tmux/theme_name" "run-shell 'mkdir -p ~/.tmux && echo ${DEFAULT_THEME_ID} > ~/.tmux/theme_name'"`,
     "if-shell \"test -f ~/.tmux/themes/truecolor.conf\" \"source-file ~/.tmux/themes/truecolor.conf\"",
-    `run-shell 'theme=$(cat ~/.tmux/theme_name 2>/dev/null || echo ${DEFAULT_THEME_ID}); mode=$(cat ~/.tmux/theme_state 2>/dev/null || echo dark); theme_file="$HOME/.tmux/themes/\${theme}-\${mode}.conf"; if [ -f "$theme_file" ]; then tmux source-file "$theme_file"; fi'`,
-    opacityLine,
+    `run-shell '${applyThemeAndOverrides}'`,
     "",
   ].join("\n");
 }

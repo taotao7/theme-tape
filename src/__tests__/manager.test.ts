@@ -122,9 +122,11 @@ describe("theme-tape manager", () => {
     });
 
     expect(result.flavor).toBe("astronvim");
-    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('colorscheme = theme');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('colorscheme = read_state("theme_name", theme)');
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('set_dark_mode = function()');
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('write_state("theme_state", mode)');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('theme = read_state("theme_name", theme)');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('vim.fn.system({ "tmux", "source-file", tmux_config })');
   });
 
   test("configures standard neovim via plugin path", () => {
@@ -147,6 +149,17 @@ describe("theme-tape manager", () => {
   test("configures ghostty tmux and yazi paths dynamically", () => {
     const root = mkdtempSync(join(tmpdir(), "theme-tape-configure-"));
     created.push(root);
+    mkdirSync(join(root, ".config", "tmux"), {recursive: true});
+    writeFileSync(
+      join(root, ".config/tmux/tmux.conf"),
+      [
+        '# --- Theme Management ---',
+        'if-shell "test ! -f ~/.tmux/theme_state" "run-shell \'echo dark > ~/.tmux/theme_state\'"',
+        'if-shell "grep -q dark ~/.tmux/theme_state" "source-file ~/.tmux/themes/zenith-dark.conf" "source-file ~/.tmux/themes/zenith-light.conf"',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
 
     applyTheme("cassette-futurism", "light", undefined, {
       repoRoot: REPO_ROOT,
@@ -169,7 +182,10 @@ describe("theme-tape manager", () => {
     expect(messages.some((message) => message.includes("Configured ghostty"))).toBe(true);
     expect(readFileSync(join(root, ".config/ghostty/config"), "utf8")).toContain("theme = dark:cassette-futurism-dark,light:cassette-futurism-light");
     expect(readFileSync(join(root, ".config/tmux/tmux.conf"), "utf8")).toContain("source-file");
+    expect(readFileSync(join(root, ".config/tmux/tmux.conf"), "utf8")).not.toContain("zenith-dark.conf");
     expect(readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8")).toContain("theme-tape managed");
+    expect(readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8")).toContain('status-style "bg=default,fg=#{@tape_fg}"');
+    expect(readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8")).toContain('@mode_indicator_empty_mode_style "fg=#{@tape_purple},bold"');
     expect(readFileSync(join(root, ".config/yazi/theme.toml"), "utf8")).toBe(renderYaziThemeToml("cassette-futurism"));
   });
 
@@ -206,5 +222,6 @@ describe("theme-tape manager", () => {
     }).transparencyMode).toBe("opaque");
     expect(readFileSync(join(root, ".config/ghostty/config"), "utf8")).toContain("background-opacity = 1.0");
     expect(readFileSync(join(root, ".config/nvim/plugin/theme-tape.lua"), "utf8")).toContain('transparent = false');
+    expect(readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8")).toContain('status-style "bg=#{@tape_bg},fg=#{@tape_fg}"');
   });
 });

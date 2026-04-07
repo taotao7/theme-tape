@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import {Box, Text, useApp, useInput} from "ink";
 import {type ApplyModeInput, applyTheme, buildThemes, installThemeAssets, readState} from "./manager";
 import {THEME_ORDER, type ThemeId, THEMES, type Mode} from "./theme-registry";
@@ -17,6 +17,35 @@ export function App() {
   const [focus, setFocus] = useState<Focus>("action");
   const [busy, setBusy] = useState(false);
   const [lines, setLines] = useState<string[]>(["Ready. Enter applies to Ghostty, Tmux, Neovim, and Yazi."]);
+
+  function syncState(nextState: {theme: ThemeId; mode: Mode}, statusLine?: string) {
+    setCurrent((previous) => {
+      if (sameState(previous, nextState)) {
+        return previous;
+      }
+
+      setThemeIndex(THEME_ORDER.indexOf(nextState.theme));
+      setModeIndex(modeIndexFor(nextState.mode));
+      if (statusLine) {
+        setLines((currentLines) => [statusLine, ...currentLines].slice(0, 6));
+      }
+
+      return nextState;
+    });
+  }
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (busy) {
+        return;
+      }
+
+      const savedState = readState();
+      syncState(savedState, `Detected saved state: ${THEMES[savedState.theme].label} · ${savedState.mode}`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [busy]);
 
   useInput((input, key) => {
     if (busy) {
@@ -86,7 +115,7 @@ export function App() {
       if (action === "Apply theme") {
         const result = applyTheme(selectedTheme, selectedMode, undefined, {logger});
         if (result.state) {
-          setCurrent(result.state);
+          syncState(result.state);
         }
       } else if (action === "Install assets") {
         installThemeAssets("all", undefined, {logger});
@@ -144,4 +173,8 @@ function Selector(props: {focused: boolean; label: string; value: string; hint: 
 
 function modeIndexFor(mode: Mode): number {
   return MODES.indexOf(mode);
+}
+
+function sameState(left: {theme: ThemeId; mode: Mode}, right: {theme: ThemeId; mode: Mode}): boolean {
+  return left.theme === right.theme && left.mode === right.mode;
 }

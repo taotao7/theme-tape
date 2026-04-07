@@ -123,7 +123,8 @@ describe("theme-tape manager", () => {
 
     expect(result.flavor).toBe("astronvim");
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('colorscheme = theme');
-    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('"f-person/auto-dark-mode.nvim"');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('set_dark_mode = function()');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('write_state("theme_state", mode)');
   });
 
   test("configures standard neovim via plugin path", () => {

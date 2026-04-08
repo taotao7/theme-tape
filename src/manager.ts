@@ -192,12 +192,6 @@ export function installThemeAssets(
       messages.push(`Tmux assets ready for ${theme.id}`);
     }
 
-    if (components.includes("nvim")) {
-      const nvimDir = join(resolved.dataHome, "nvim", "site", "pack", "theme-tape", "start");
-      linkPath(join(theme.distDir, "nvim", theme.nvimPluginDir), join(nvimDir, theme.nvimPluginDir), resolved);
-      messages.push(`Neovim plugin ready for ${theme.id}`);
-    }
-
     if (components.includes("yazi")) {
       const yaziDir = join(resolved.configHome, "yazi", "flavors");
       linkPath(
@@ -212,6 +206,15 @@ export function installThemeAssets(
       );
       messages.push(`Yazi flavors ready for ${theme.id}`);
     }
+  }
+
+  // Neovim config references all themes, so always install all nvim plugins
+  if (components.includes("nvim")) {
+    const nvimDir = join(resolved.dataHome, "nvim", "site", "pack", "theme-tape", "start");
+    for (const theme of Object.values(THEMES)) {
+      linkPath(join(theme.distDir, "nvim", theme.nvimPluginDir), join(nvimDir, theme.nvimPluginDir), resolved);
+    }
+    messages.push("Neovim plugins ready");
   }
 
   if (components.includes("nvim")) {

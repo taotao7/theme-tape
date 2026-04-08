@@ -916,7 +916,6 @@ function renderTmuxManagedConfig(transparencyMode: TransparencyMode): string {
     "# theme-tape managed",
     "if-shell \"test ! -f ~/.tmux/theme_state\" \"run-shell 'mkdir -p ~/.tmux && echo dark > ~/.tmux/theme_state'\"",
     `if-shell "test ! -f ~/.tmux/theme_name" "run-shell 'mkdir -p ~/.tmux && echo ${DEFAULT_THEME_ID} > ~/.tmux/theme_name'"`,
-    "if-shell \"test -f ~/.tmux/themes/truecolor.conf\" \"source-file ~/.tmux/themes/truecolor.conf\"",
     `run-shell '${applyThemeAndOverrides}'`,
     "",
   ].join("\n");

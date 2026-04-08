@@ -160,18 +160,20 @@ def gen_tmux_truecolor() -> str:
     """Generate tmux truecolor + undercurl passthrough config.
 
     This is separate from theme files — add to tmux.conf once.
+    Safe to re-source: first entry uses set -g to reset overrides.
     """
     return textwrap.dedent("""\
         # Zenith — Truecolor & Undercurl Passthrough
         # Source this in tmux.conf for proper color rendering
         # Replaces: set -g default-terminal "xterm-256color"
+        # Safe to re-source: first entry uses set -g to reset overrides
 
         set -g  default-terminal "tmux-256color"
-        set -as terminal-overrides ",*256col*:RGB"
+        set -g  terminal-overrides "linux*:AX@,*256col*:RGB"
         set -as terminal-overrides ",*:Tc"
-        set -as terminal-overrides ",*:sitm=\\E[3m"
-        set -as terminal-overrides ",*:Smulx=\\E[4::%p1%dm"
-        set -as terminal-overrides ",*:Setulc=\\E[58::2::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%d%;m"
+        set -as terminal-overrides ',*:sitm=\\E[3m'
+        set -as terminal-overrides ',*:Smulx=\\E[4::%p1%dm'
+        set -as terminal-overrides ',*:Setulc=\\E[58::2::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%d%;m'
     """)
 
 

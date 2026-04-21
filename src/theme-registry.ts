@@ -4,7 +4,7 @@ import {fileURLToPath} from "node:url";
 
 export type ThemeId = string;
 export type Mode = "dark" | "light";
-export type ComponentId = "ghostty" | "tmux" | "nvim" | "yazi";
+export type ComponentId = "ghostty" | "tmux" | "nvim" | "yazi" | "opencode";
 
 interface ThemeManifest {
   id: string;
@@ -16,6 +16,7 @@ interface ThemeManifest {
   nvimPluginDir: string;
   nvimColorscheme: string;
   yaziFlavorBase: string;
+  opencodeThemeBase: string;
 }
 
 export interface ThemeSpec {
@@ -30,12 +31,13 @@ export interface ThemeSpec {
   nvimPluginDir: string;
   nvimColorscheme: string;
   yaziFlavorBase: string;
+  opencodeThemeBase: string;
 }
 
 const sourceDir = dirname(fileURLToPath(import.meta.url));
 
 export const REPO_ROOT = resolveRepoRoot();
-export const ALL_COMPONENTS: ComponentId[] = ["ghostty", "tmux", "nvim", "yazi"];
+export const ALL_COMPONENTS: ComponentId[] = ["ghostty", "tmux", "nvim", "yazi", "opencode"];
 export const THEMES = loadThemes(REPO_ROOT);
 export const THEME_ORDER = Object.values(THEMES)
   .sort((left, right) => left.order - right.order || left.label.localeCompare(right.label))

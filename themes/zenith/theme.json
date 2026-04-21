@@ -6,5 +6,6 @@
   "tmuxThemeBase": "zenith",
   "nvimPluginDir": "zenith.nvim",
   "nvimColorscheme": "zenith",
-  "yaziFlavorBase": "zenith"
+  "yaziFlavorBase": "zenith",
+  "opencodeThemeBase": "zenith"
 }

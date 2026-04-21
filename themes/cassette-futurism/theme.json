@@ -7,5 +7,6 @@
   "tmuxThemeBase": "cassette-futurism",
   "nvimPluginDir": "cassette-futurism.nvim",
   "nvimColorscheme": "cassette-futurism",
-  "yaziFlavorBase": "cassette-futurism"
+  "yaziFlavorBase": "cassette-futurism",
+  "opencodeThemeBase": "cassette-futurism"
 }

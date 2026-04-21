@@ -189,6 +189,52 @@ describe("theme-tape manager", () => {
     expect(readFileSync(join(root, ".config/yazi/theme.toml"), "utf8")).toBe(renderYaziThemeToml("cassette-futurism"));
   });
 
+  test("applies opencode theme assets and tui.json pointer", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-opencode-"));
+    created.push(root);
+
+    setTransparencyMode("opaque", {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    applyTheme("zenith", "light", undefined, {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const tuiJson = JSON.parse(readFileSync(join(root, ".config/opencode/tui.json"), "utf8"));
+    expect(tuiJson.theme).toBe("zenith-light");
+    expect(tuiJson.$schema).toBe("https://opencode.ai/tui.json");
+    const themeJson = JSON.parse(readFileSync(join(root, ".config/opencode/themes/zenith-light.json"), "utf8"));
+    expect(themeJson.theme.text).toBeDefined();
+    expect(themeJson.theme.background).not.toBe("none");
+    expect(themeJson.theme.background).toMatch(/^#/);
+
+    setTransparencyMode("transparent", {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const transparentTheme = JSON.parse(
+      readFileSync(join(root, ".config/opencode/themes/zenith-light.json"), "utf8"),
+    );
+    expect(transparentTheme.theme.background).toBe("none");
+    expect(transparentTheme.theme.backgroundPanel).toBe("none");
+  });
+
   test("stores transparency config and applies opaque mode", () => {
     const root = mkdtempSync(join(tmpdir(), "theme-tape-opacity-"));
     created.push(root);

@@ -8,6 +8,7 @@ Reads palette.toml and generates unified configs for:
 """
 
 import tomllib
+import json
 import os
 import textwrap
 from pathlib import Path
@@ -770,6 +771,89 @@ def gen_nvim_lualine(palette: dict) -> str:
 # ─── Install / Switch scripts ─────────────────────────────────────
 
 
+def gen_opencode(palette: dict, mode: str) -> str:
+    """Generate an opencode TUI theme (JSON) for the given mode.
+
+    Follows https://opencode.ai/theme.json schema. Emits one file per mode so
+    theme-tape can point tui.json at zenith-dark or zenith-light deterministically.
+    """
+    p = palette[mode]
+    b = p["base"]
+    t = p["text"]
+    a = p["accent"]
+    d = p["diagnostic"]
+    g = p["git"]
+
+    theme = {
+        "primary": a["purple"],
+        "secondary": a["blue"],
+        "accent": a["cyan"],
+        "error": d["error"],
+        "warning": d["warn"],
+        "success": d["hint"],
+        "info": d["info"],
+
+        "text": t["fg"],
+        "textMuted": t["fg_dim"],
+
+        "background": b["bg"],
+        "backgroundPanel": b["bg1"],
+        "backgroundElement": b["bg2"],
+
+        "border": b["border"],
+        "borderActive": a["purple"],
+        "borderSubtle": t["comment"],
+
+        "diffAdded": g["add"],
+        "diffRemoved": g["delete"],
+        "diffContext": t["fg_dim"],
+        "diffHunkHeader": a["cyan"],
+        "diffHighlightAdded": g["add"],
+        "diffHighlightRemoved": g["delete"],
+        "diffAddedBg": b["bg1"],
+        "diffRemovedBg": b["bg1"],
+        "diffContextBg": b["bg"],
+        "diffLineNumber": t["comment"],
+        "diffAddedLineNumberBg": b["bg1"],
+        "diffRemovedLineNumberBg": b["bg1"],
+
+        "markdownText": t["fg"],
+        "markdownHeading": a["purple"],
+        "markdownLink": a["cyan"],
+        "markdownLinkText": a["blue"],
+        "markdownCode": a["orange"],
+        "markdownBlockQuote": t["fg_dim"],
+        "markdownEmph": a["yellow"],
+        "markdownStrong": a["orange"],
+        "markdownHorizontalRule": t["comment"],
+        "markdownListItem": a["cyan"],
+        "markdownListEnumeration": a["cyan"],
+        "markdownImage": a["pink"],
+        "markdownImageText": t["fg"],
+        "markdownCodeBlock": a["green"],
+
+        "syntaxComment": t["comment"],
+        "syntaxKeyword": a["purple"],
+        "syntaxFunction": a["blue"],
+        "syntaxVariable": t["fg"],
+        "syntaxString": a["green"],
+        "syntaxNumber": a["orange"],
+        "syntaxType": a["yellow"],
+        "syntaxOperator": a["pink"],
+        "syntaxPunctuation": t["fg_dim"],
+    }
+
+    doc = {
+        "$schema": "https://opencode.ai/theme.json",
+        "theme": theme,
+    }
+
+    return json.dumps(doc, indent=2) + "\n"
+
+
+# ─── Install / Switch scripts ─────────────────────────────────────
+
+
 def gen_install_sh() -> str:
     return textwrap.dedent("""\
         #!/usr/bin/env bash
@@ -941,6 +1025,10 @@ def main():
     write(DIST / "yazi" / "flavors" / "zenith-dark.yazi" / "flavor.toml", gen_yazi(palette, "dark"))
     write(DIST / "yazi" / "flavors" / "zenith-light.yazi" / "flavor.toml", gen_yazi(palette, "light"))
     write(DIST / "yazi" / "theme.toml", gen_yazi_theme_pointer())
+
+    # Opencode
+    write(DIST / "opencode" / "zenith-dark.json", gen_opencode(palette, "dark"))
+    write(DIST / "opencode" / "zenith-light.json", gen_opencode(palette, "light"))
 
     # Neovim plugin
     nvim = DIST / "nvim" / "zenith.nvim"

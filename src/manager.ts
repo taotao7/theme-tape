@@ -16,6 +16,7 @@ import {
   type Mode,
   REPO_ROOT,
   type ThemeId,
+  type ThemeSpec,
   THEMES,
   THEME_ORDER,
   resolveMode,
@@ -63,6 +64,8 @@ export interface DoctorThemeInfo {
   nvimPluginAsset: DoctorPath;
   yaziDarkAsset: DoctorPath;
   yaziLightAsset: DoctorPath;
+  opencodeDarkAsset: DoctorPath;
+  opencodeLightAsset: DoctorPath;
   ghosttyDarkLink: DoctorPath;
   ghosttyLightLink: DoctorPath;
   tmuxDarkLink: DoctorPath;
@@ -70,6 +73,8 @@ export interface DoctorThemeInfo {
   nvimPluginLink: DoctorPath;
   yaziDarkLink: DoctorPath;
   yaziLightLink: DoctorPath;
+  opencodeDarkLink: DoctorPath;
+  opencodeLightLink: DoctorPath;
 }
 
 export interface DoctorInfo {
@@ -90,12 +95,14 @@ export interface DoctorInfo {
   nvimConfigRoot: DoctorPath;
   nvimFlavor: NvimFlavor;
   nvimManagedConfig: DoctorPath;
+  opencodeConfigRoot: DoctorPath;
+  opencodeTuiFile: DoctorPath;
   state: ThemeState;
   themes: DoctorThemeInfo[];
 }
 
 export type NvimFlavor = "astronvim" | "neovim";
-export type ConfigureTarget = "ghostty" | "tmux" | "nvim" | "yazi" | "all";
+export type ConfigureTarget = "ghostty" | "tmux" | "nvim" | "yazi" | "opencode" | "all";
 export type TransparencyMode = "auto" | "transparent" | "opaque";
 
 export interface ThemeTapeConfig {
@@ -206,6 +213,12 @@ export function installThemeAssets(
       );
       messages.push(`Yazi flavors ready for ${theme.id}`);
     }
+
+    if (components.includes("opencode")) {
+      writeOpencodeThemeFile(theme, "dark", resolved);
+      writeOpencodeThemeFile(theme, "light", resolved);
+      messages.push(`Opencode themes ready for ${theme.id}`);
+    }
   }
 
   // Neovim config references all themes, so always install all nvim plugins
@@ -235,6 +248,11 @@ export function installThemeAssets(
   if (components.includes("yazi")) {
     const integration = configureYazi(resolved);
     messages.push(`Yazi config ready: ${integration.managedConfig.path}`);
+  }
+
+  if (components.includes("opencode")) {
+    const integration = configureOpencode(resolved);
+    messages.push(`Opencode config ready: ${integration.managedConfig.path}`);
   }
 
   for (const message of messages) {
@@ -279,6 +297,14 @@ export function applyTheme(
     const yaziThemePath = join(resolved.configHome, "yazi", "theme.toml");
     writeManagedFile(yaziThemePath, renderYaziThemeToml(theme.id), resolved);
     messages.push(`Yazi switched to ${theme.id}`);
+  }
+
+  if (components.includes("opencode")) {
+    writeOpencodeThemeFile(theme, "dark", resolved);
+    writeOpencodeThemeFile(theme, "light", resolved);
+    const tuiPath = detectOpencodeIntegration(resolved).tuiPath;
+    writeManagedFile(tuiPath, renderOpencodeTuiJson(theme.id, mode), resolved);
+    messages.push(`Opencode switched to ${theme.id}-${mode}`);
   }
 
   if (components.includes("tmux") && resolved.reloadTmux) {
@@ -332,10 +358,12 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const tmuxIntegration = detectTmuxIntegration(resolved);
   const yaziIntegration = detectYaziIntegration(resolved);
   const integration = detectNvimIntegration(resolved);
+  const opencodeIntegration = detectOpencodeIntegration(resolved);
   const ghosttyThemesDir = join(resolved.configHome, "ghostty", "themes");
   const tmuxThemesDir = join(resolved.homeDir, ".tmux", "themes");
   const nvimDir = join(resolved.dataHome, "nvim", "site", "pack", "theme-tape", "start");
   const yaziFlavorsDir = join(resolved.configHome, "yazi", "flavors");
+  const opencodeThemesDir = opencodeIntegration.themesDir;
 
   return {
     repoRoot: createDoctorPath(resolved.repoRoot),
@@ -355,6 +383,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
     nvimConfigRoot: createDoctorPath(integration.configRoot),
     nvimFlavor: integration.flavor,
     nvimManagedConfig: createDoctorPath(integration.managedConfigPath),
+    opencodeConfigRoot: createDoctorPath(opencodeIntegration.configRoot),
+    opencodeTuiFile: createDoctorPath(opencodeIntegration.tuiPath),
     state,
     themes: THEME_ORDER.map((themeId) => {
       const theme = THEMES[themeId];
@@ -370,6 +400,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         nvimPluginAsset: createDoctorPath(join(theme.distDir, "nvim", theme.nvimPluginDir)),
         yaziDarkAsset: createDoctorPath(join(theme.distDir, "yazi", "flavors", `${theme.yaziFlavorBase}-dark.yazi`)),
         yaziLightAsset: createDoctorPath(join(theme.distDir, "yazi", "flavors", `${theme.yaziFlavorBase}-light.yazi`)),
+        opencodeDarkAsset: createDoctorPath(join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-dark.json`)),
+        opencodeLightAsset: createDoctorPath(join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-light.json`)),
         ghosttyDarkLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-dark`)),
         ghosttyLightLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-light`)),
         tmuxDarkLink: createDoctorPath(join(tmuxThemesDir, `${theme.tmuxThemeBase}-dark.conf`)),
@@ -377,6 +409,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         nvimPluginLink: createDoctorPath(join(nvimDir, theme.nvimPluginDir)),
         yaziDarkLink: createDoctorPath(join(yaziFlavorsDir, `${theme.yaziFlavorBase}-dark.yazi`)),
         yaziLightLink: createDoctorPath(join(yaziFlavorsDir, `${theme.yaziFlavorBase}-light.yazi`)),
+        opencodeDarkLink: createDoctorPath(join(opencodeThemesDir, `${theme.opencodeThemeBase}-dark.json`)),
+        opencodeLightLink: createDoctorPath(join(opencodeThemesDir, `${theme.opencodeThemeBase}-light.json`)),
       };
     }),
   };
@@ -405,6 +439,8 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
     `nvim config root: ${formatDoctorPath(info.nvimConfigRoot)}`,
     `nvim flavor: ${info.nvimFlavor}`,
     `nvim managed config: ${formatDoctorPath(info.nvimManagedConfig)}`,
+    `opencode config root: ${formatDoctorPath(info.opencodeConfigRoot)}`,
+    `opencode tui.json: ${formatDoctorPath(info.opencodeTuiFile)}`,
   ];
 
   for (const theme of info.themes) {
@@ -427,6 +463,10 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
       `  yazi asset light: ${formatDoctorPath(theme.yaziLightAsset)}`,
       `  yazi install dark: ${formatDoctorPath(theme.yaziDarkLink)}`,
       `  yazi install light: ${formatDoctorPath(theme.yaziLightLink)}`,
+      `  opencode asset dark: ${formatDoctorPath(theme.opencodeDarkAsset)}`,
+      `  opencode asset light: ${formatDoctorPath(theme.opencodeLightAsset)}`,
+      `  opencode install dark: ${formatDoctorPath(theme.opencodeDarkLink)}`,
+      `  opencode install light: ${formatDoctorPath(theme.opencodeLightLink)}`,
     );
   }
 
@@ -508,6 +548,23 @@ export function configureYazi(options: ManagerOptions = {}): {managedConfig: Doc
   };
 }
 
+export function configureOpencode(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
+  const resolved = resolveOptions(options);
+  const state = readState(resolved);
+  const integration = detectOpencodeIntegration(resolved);
+
+  for (const theme of Object.values(THEMES)) {
+    writeOpencodeThemeFile(theme, "dark", resolved);
+    writeOpencodeThemeFile(theme, "light", resolved);
+  }
+
+  writeManagedFile(integration.tuiPath, renderOpencodeTuiJson(state.theme, state.mode), resolved);
+
+  return {
+    managedConfig: createDoctorPath(integration.tuiPath),
+  };
+}
+
 export function configureTargets(target: ConfigureTarget = "all", options: ManagerOptions = {}): string[] {
   const resolved = resolveOptions(options);
   const targets = target === "all" ? ALL_COMPONENTS : [target];
@@ -523,6 +580,8 @@ export function configureTargets(target: ConfigureTarget = "all", options: Manag
       messages.push(`Configured ${result.flavor}: ${result.managedConfig.path}`);
     } else if (component === "yazi") {
       messages.push(`Configured yazi: ${configureYazi(resolved).managedConfig.path}`);
+    } else if (component === "opencode") {
+      messages.push(`Configured opencode: ${configureOpencode(resolved).managedConfig.path}`);
     }
   }
 
@@ -736,6 +795,66 @@ function detectYaziIntegration(options: ResolvedOptions): {
     configRoot,
     themePath: join(configRoot, "theme.toml"),
   };
+}
+
+function detectOpencodeIntegration(options: ResolvedOptions): {
+  configRoot: string;
+  themesDir: string;
+  tuiPath: string;
+} {
+  const configRoot = join(options.configHome, "opencode");
+  return {
+    configRoot,
+    themesDir: join(configRoot, "themes"),
+    tuiPath: join(configRoot, "tui.json"),
+  };
+}
+
+function writeOpencodeThemeFile(theme: ThemeSpec, mode: Mode, options: ResolvedOptions): void {
+  const sourcePath = join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-${mode}.json`);
+  if (!existsSync(sourcePath)) {
+    throw new Error(`Missing generated asset: ${sourcePath}`);
+  }
+
+  const config = readThemeTapeConfig(options);
+  const transparent = shouldOpencodeBeTransparent(theme.id, config.transparencyMode);
+  const raw = JSON.parse(readFileSync(sourcePath, "utf8")) as {
+    $schema?: string;
+    theme: Record<string, string>;
+  };
+
+  if (transparent) {
+    raw.theme.background = "none";
+    raw.theme.backgroundPanel = "none";
+    raw.theme.backgroundElement = "none";
+  }
+
+  const targetDir = detectOpencodeIntegration(options).themesDir;
+  const targetPath = join(targetDir, `${theme.opencodeThemeBase}-${mode}.json`);
+  writeManagedFile(targetPath, `${JSON.stringify(raw, null, 2)}\n`, options);
+}
+
+function renderOpencodeTuiJson(themeId: ThemeId, mode: Mode): string {
+  return `${JSON.stringify(
+    {
+      $schema: "https://opencode.ai/tui.json",
+      theme: `${THEMES[themeId].opencodeThemeBase}-${mode}`,
+    },
+    null,
+    2,
+  )}\n`;
+}
+
+function shouldOpencodeBeTransparent(themeId: ThemeId, mode: TransparencyMode): boolean {
+  if (mode === "transparent") {
+    return true;
+  }
+
+  if (mode === "opaque") {
+    return false;
+  }
+
+  return resolveThemeTransparency(mode)[themeId === "cassette-futurism" ? "cassette" : "zenith"];
 }
 
 function detectNvimIntegration(options: ResolvedOptions): {

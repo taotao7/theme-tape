@@ -1,6 +1,6 @@
 # theme-tape
 
-`theme-tape` is a Bun + Ink TUI and CLI for managing the `cassette-futurism` and `zenith` themes across Ghostty, tmux, Neovim/AstroNvim, and Yazi from one place.
+`theme-tape` is a Bun + Ink TUI and CLI for managing the `cassette-futurism` and `zenith` themes across Ghostty, tmux, Neovim/AstroNvim, Yazi, and opencode from one place.
 
 ## Preview
 
@@ -18,7 +18,7 @@ Source image URLs:
 - One manager for both themes
 - Interactive TUI plus scriptable CLI
 - Dark, light, and toggle mode switching
-- Managed config generation for Ghostty, tmux, Neovim/AstroNvim, and Yazi
+- Managed config generation for Ghostty, tmux, Neovim/AstroNvim, Yazi, and opencode
 - Transparency control with `auto`, `transparent`, and `opaque` modes
 - `doctor` output for real asset paths, install paths, and detected config locations
 - Manifest-based theme discovery for adding more themes later
@@ -118,6 +118,12 @@ theme-tape apply --theme zenith --mode dark
 - installs flavors into `~/.config/yazi/flavors`
 - manages `~/.config/yazi/theme.toml`
 
+### opencode
+
+- installs theme JSONs into `~/.config/opencode/themes`
+- manages `~/.config/opencode/tui.json`
+- sets `background`/`backgroundPanel`/`backgroundElement` to `"none"` when transparency is enabled
+
 ## Adding themes
 
 Themes are discovered from `themes/*/theme.json`. Each theme directory can ship assets for:
@@ -126,6 +132,7 @@ Themes are discovered from `themes/*/theme.json`. Each theme directory can ship 
 - tmux
 - Neovim
 - Yazi
+- opencode
 
 This keeps the manager extensible without hardcoding every theme in the CLI.
 

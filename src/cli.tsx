@@ -15,9 +15,9 @@ Usage:
   theme-tape doctor          Print real asset and install paths
   theme-tape build           Regenerate cassette-futurism and zenith outputs
   theme-tape config [auto|transparent|opaque]
-  theme-tape configure [all|ghostty|tmux|nvim|yazi]
-  theme-tape install [--theme all|cassette-futurism|zenith] [--components all|ghostty,tmux,nvim,yazi]
-  theme-tape apply [--theme toggle|cassette|cassette-futurism|zenith] [--mode toggle|dark|light] [--components all|ghostty,tmux,nvim,yazi]
+  theme-tape configure [all|ghostty|tmux|nvim|yazi|opencode]
+  theme-tape install [--theme all|cassette-futurism|zenith] [--components all|ghostty,tmux,nvim,yazi,opencode]
+  theme-tape apply [--theme toggle|cassette|cassette-futurism|zenith] [--mode toggle|dark|light] [--components all|ghostty,tmux,nvim,yazi,opencode]
 
 If --theme is omitted for apply, the current saved theme is preserved.
 `);

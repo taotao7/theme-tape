@@ -42,7 +42,7 @@ fi
 # ── Neovim (all running instances) ──
 for sock in /tmp/nvim.*/0 "${XDG_RUNTIME_DIR:-/tmp}"/nvim.*/0; do
   [ -S "$sock" ] 2>/dev/null || continue
-  nvim --server "$sock" --remote-send "<Cmd>set background=$MODE<CR>" 2>/dev/null || true
+  nvim --server "$sock" --remote-send "<Cmd>lua require(\"cassette-futurism\").setup({ style = \"$MODE\" }) | set background=$MODE | colorscheme cassette-futurism<CR>" 2>/dev/null || true
 done
 echo "  ✓ Neovim → background=$MODE"
 

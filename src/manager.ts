@@ -282,6 +282,10 @@ export function applyTheme(
   writeManagedFile(join(tmuxDir, "theme_name"), `${theme.id}\n`, resolved);
   messages.push(`State set to ${theme.id} (${mode})`);
 
+  if (components.includes("tmux")) {
+    configureTmux(resolved);
+  }
+
   if (components.includes("ghostty")) {
     const ghosttyConfig = join(resolved.configHome, "ghostty", "config");
     upsertConfigLine(
@@ -518,10 +522,15 @@ export function configureGhostty(options: ManagerOptions = {}): {managedConfig: 
 
 export function configureTmux(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
   const resolved = resolveOptions(options);
+  const state = readState(resolved);
   const integration = detectTmuxIntegration(resolved);
   const config = readThemeTapeConfig(resolved);
 
-  writeManagedFile(integration.managedConfigPath, renderTmuxManagedConfig(config.transparencyMode), resolved);
+  writeManagedFile(
+    integration.managedConfigPath,
+    renderTmuxManagedConfig(state.theme, state.mode, config.transparencyMode, resolved),
+    resolved,
+  );
   cleanupLegacyTmuxConfig(integration.configPath, resolved);
   upsertManagedBlock(
     integration.configPath,
@@ -1021,24 +1030,24 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
   ].join("\n");
 }
 
-function renderTmuxManagedConfig(transparencyMode: TransparencyMode): string {
+function renderTmuxManagedConfig(
+  themeId: ThemeId,
+  mode: Mode,
+  transparencyMode: TransparencyMode,
+  options: ResolvedOptions,
+): string {
   const transparent = transparencyMode !== "opaque";
+  const themeFile = join(options.homeDir, ".tmux", "themes", `${THEMES[themeId].tmuxThemeBase}-${mode}.conf`);
   const statusStyle = transparent ? "bg=default,fg=#{@tape_fg}" : "bg=#{@tape_bg},fg=#{@tape_fg}";
-  const emptyModeStyle = transparent ? "fg=#{@tape_purple},bold" : "bg=#{@tape_purple},fg=#{@tape_dark},bold";
-  const applyThemeAndOverrides = [
-    "theme=$(cat ~/.tmux/theme_name 2>/dev/null || echo zenith)",
-    "mode=$(cat ~/.tmux/theme_state 2>/dev/null || echo dark)",
-    "theme_file=\"$HOME/.tmux/themes/${theme}-${mode}.conf\"",
-    "if [ -f \"$theme_file\" ]; then tmux source-file \"$theme_file\"; fi",
-    `tmux set -g status-style "${statusStyle}"`,
-    `tmux set -g @mode_indicator_empty_mode_style "${emptyModeStyle}"`,
-  ].join("; ");
+  const emptyModeStyle = transparent ? "bg=default,fg=#{@tape_purple},bold" : "bg=#{@tape_purple},fg=#{@tape_dark},bold";
 
   return [
     "# theme-tape managed",
     "if-shell \"test ! -f ~/.tmux/theme_state\" \"run-shell 'mkdir -p ~/.tmux && echo dark > ~/.tmux/theme_state'\"",
     `if-shell "test ! -f ~/.tmux/theme_name" "run-shell 'mkdir -p ~/.tmux && echo ${DEFAULT_THEME_ID} > ~/.tmux/theme_name'"`,
-    `run-shell '${applyThemeAndOverrides}'`,
+    `if-shell "test -f ${themeFile}" "source-file ${themeFile}"`,
+    `set -g status-style "${statusStyle}"`,
+    `set -g @mode_indicator_empty_mode_style "${emptyModeStyle}"`,
     "",
   ].join("\n");
 }
@@ -1071,7 +1080,7 @@ function reloadTmux(themeId: ThemeId, mode: Mode, options: ResolvedOptions, mess
   }
 
   const integration = detectTmuxIntegration(options);
-  spawnSync("tmux", ["source-file", integration.configPath], {stdio: "ignore"});
+  spawnSync("tmux", ["source-file", integration.managedConfigPath], {stdio: "ignore"});
   const label = `${themeId.toUpperCase()} ${mode.toUpperCase()}`;
   spawnSync("tmux", ["display-message", ` ${label}`], {stdio: "ignore"});
   messages.push(`Tmux switched to ${themeId}`);
@@ -1089,12 +1098,24 @@ function refreshNeovim(themeId: ThemeId, mode: Mode, options: ResolvedOptions, m
     return;
   }
 
-  const command = `set background=${mode} | colorscheme ${THEMES[themeId].nvimColorscheme}`;
+  const command = renderNeovimRemoteCommand(themeId, mode, readThemeTapeConfig(options).transparencyMode);
   for (const socket of sockets) {
     spawnSync("nvim", ["--server", socket, "--remote-send", `<Cmd>${command}<CR>`], {stdio: "ignore"});
   }
 
   messages.push(`Neovim switched to ${themeId}`);
+}
+
+export function renderNeovimRemoteCommand(themeId: ThemeId, mode: Mode, transparencyMode: TransparencyMode): string {
+  const colorscheme = THEMES[themeId].nvimColorscheme;
+  const transparency = resolveThemeTransparency(transparencyMode);
+  const transparent = themeId === "cassette-futurism" ? transparency.cassette : transparency.zenith;
+
+  return [
+    `set background=${mode}`,
+    `lua require("${colorscheme}").setup({ style = "${mode}", transparent = ${transparent ? "true" : "false"}, dim_inactive = true })`,
+    `colorscheme ${colorscheme}`,
+  ].join(" | ");
 }
 
 function listNvimSockets(runtimeDir: string): string[] {

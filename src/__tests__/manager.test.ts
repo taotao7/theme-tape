@@ -160,7 +160,7 @@ describe("theme-tape manager", () => {
     const command = renderNeovimRemoteCommand("cassette-futurism", "light", "auto");
 
     expect(command).toContain("set background=light");
-    expect(command).toContain('require("cassette-futurism").setup({ style = "light", transparent = false, dim_inactive = true })');
+    expect(command).toContain('require("cassette-futurism").setup({ style = "light", transparent = true, dim_inactive = true })');
     expect(command).toContain("colorscheme cassette-futurism");
   });
 

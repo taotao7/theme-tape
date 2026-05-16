@@ -768,7 +768,7 @@ function resolveThemeTransparency(mode: TransparencyMode): {zenith: boolean; cas
     return {zenith: false, cassette: false};
   }
 
-  return {zenith: true, cassette: false};
+  return {zenith: true, cassette: true};
 }
 
 function detectGhosttyIntegration(options: ResolvedOptions): {

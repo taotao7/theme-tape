@@ -698,7 +698,10 @@ def gen_nvim_init() -> str:
           local palette = require("cassette-futurism.palette")
           local p = palette[style] or palette.dark
 
-          require("cassette-futurism.theme").setup(p, config)
+          local effective_config = vim.tbl_extend("force", config, {
+            transparent = config.transparent and style == "dark",
+          })
+          require("cassette-futurism.theme").setup(p, effective_config)
 
           -- Terminal ANSI colors
           vim.g.terminal_color_0  = p.base.bg1

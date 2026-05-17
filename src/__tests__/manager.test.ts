@@ -51,6 +51,23 @@ describe("theme-tape manager", () => {
     expect(realpathSync(join(root, ".local/share/nvim/site/pack/theme-tape/start/zenith.nvim"))).toBe(join(REPO_ROOT, "themes/zenith/dist/nvim/zenith.nvim"));
   });
 
+  test("installs warp theme assets only when explicitly requested", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-warp-install-"));
+    created.push(root);
+
+    installThemeAssets("all", ["warp"], {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    expect(realpathSync(join(root, ".warp/themes/zenith-dark.yaml"))).toBe(join(REPO_ROOT, "themes/zenith/dist/warp/zenith-dark.yaml"));
+    expect(realpathSync(join(root, ".warp/themes/cassette-futurism-light.yaml"))).toBe(join(REPO_ROOT, "themes/cassette-futurism/dist/warp/cassette-futurism-light.yaml"));
+  });
+
   test("applies theme state and rewrites yazi pointer", () => {
     const root = mkdtempSync(join(tmpdir(), "theme-tape-apply-"));
     created.push(root);
@@ -133,7 +150,10 @@ describe("theme-tape manager", () => {
 
     expect(result.flavor).toBe("astronvim");
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('colorscheme = read_state("theme_name", theme)');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('local mode = system_mode(read_state("theme_state", "dark"))');
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('set_dark_mode = function()');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('lazy = false');
+    expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('require("auto-dark-mode").setup(opts)');
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('write_state("theme_state", mode)');
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('theme = read_state("theme_name", theme)');
     expect(readFileSync(join(root, ".config/nvim/lua/plugins/theme-tape.lua"), "utf8")).toContain('vim.fn.system({ "tmux", "source-file", tmux_config })');
@@ -164,7 +184,7 @@ describe("theme-tape manager", () => {
     expect(command).toContain("colorscheme cassette-futurism");
   });
 
-  test("configures ghostty tmux and yazi paths dynamically", () => {
+  test("configures ghostty warp tmux and yazi paths dynamically", () => {
     const root = mkdtempSync(join(tmpdir(), "theme-tape-configure-"));
     created.push(root);
     mkdirSync(join(root, ".config", "tmux"), {recursive: true});
@@ -198,6 +218,7 @@ describe("theme-tape manager", () => {
     });
 
     expect(messages.some((message) => message.includes("Configured ghostty"))).toBe(true);
+    expect(messages.some((message) => message.includes("Configured warp"))).toBe(false);
     expect(readFileSync(join(root, ".config/ghostty/config"), "utf8")).toContain("theme = dark:cassette-futurism-dark,light:cassette-futurism-light");
     expect(readFileSync(join(root, ".config/tmux/tmux.conf"), "utf8")).toContain("source-file");
     expect(readFileSync(join(root, ".config/tmux/tmux.conf"), "utf8")).not.toContain("zenith-dark.conf");

@@ -59,6 +59,8 @@ export interface DoctorThemeInfo {
   distDir: DoctorPath;
   ghosttyDarkAsset: DoctorPath;
   ghosttyLightAsset: DoctorPath;
+  warpDarkAsset: DoctorPath;
+  warpLightAsset: DoctorPath;
   tmuxDarkAsset: DoctorPath;
   tmuxLightAsset: DoctorPath;
   nvimPluginAsset: DoctorPath;
@@ -68,6 +70,8 @@ export interface DoctorThemeInfo {
   opencodeLightAsset: DoctorPath;
   ghosttyDarkLink: DoctorPath;
   ghosttyLightLink: DoctorPath;
+  warpDarkLink: DoctorPath;
+  warpLightLink: DoctorPath;
   tmuxDarkLink: DoctorPath;
   tmuxLightLink: DoctorPath;
   nvimPluginLink: DoctorPath;
@@ -86,6 +90,7 @@ export interface DoctorInfo {
   themeTapeConfig: DoctorPath;
   transparencyMode: TransparencyMode;
   ghosttyConfig: DoctorPath;
+  warpThemesDir: DoctorPath;
   tmuxConfig: DoctorPath;
   tmuxManagedConfig: DoctorPath;
   tmuxStateFile: DoctorPath;
@@ -102,7 +107,7 @@ export interface DoctorInfo {
 }
 
 export type NvimFlavor = "astronvim" | "neovim";
-export type ConfigureTarget = "ghostty" | "tmux" | "nvim" | "yazi" | "opencode" | "all";
+export type ConfigureTarget = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "all";
 export type TransparencyMode = "auto" | "transparent" | "opaque";
 
 export interface ThemeTapeConfig {
@@ -191,6 +196,13 @@ export function installThemeAssets(
       messages.push(`Ghostty assets ready for ${theme.id}`);
     }
 
+    if (components.includes("warp")) {
+      const warpDir = detectWarpIntegration(resolved).themesDir;
+      linkPath(join(theme.distDir, "warp", `${theme.id}-dark.yaml`), join(warpDir, `${theme.id}-dark.yaml`), resolved);
+      linkPath(join(theme.distDir, "warp", `${theme.id}-light.yaml`), join(warpDir, `${theme.id}-light.yaml`), resolved);
+      messages.push(`Warp themes ready for ${theme.id}`);
+    }
+
     if (components.includes("tmux")) {
       const tmuxDir = join(resolved.homeDir, ".tmux", "themes");
       linkPath(join(theme.distDir, "tmux", `${theme.tmuxThemeBase}-dark.conf`), join(tmuxDir, `${theme.tmuxThemeBase}-dark.conf`), resolved);
@@ -238,6 +250,11 @@ export function installThemeAssets(
   if (components.includes("ghostty")) {
     const integration = configureGhostty(resolved);
     messages.push(`Ghostty config ready: ${integration.managedConfig.path}`);
+  }
+
+  if (components.includes("warp")) {
+    const integration = configureWarp(resolved);
+    messages.push(`Warp themes ready: ${integration.managedConfig.path}`);
   }
 
   if (components.includes("tmux")) {
@@ -359,11 +376,13 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const state = readState(resolved);
   const config = readThemeTapeConfig(resolved);
   const ghosttyIntegration = detectGhosttyIntegration(resolved);
+  const warpIntegration = detectWarpIntegration(resolved);
   const tmuxIntegration = detectTmuxIntegration(resolved);
   const yaziIntegration = detectYaziIntegration(resolved);
   const integration = detectNvimIntegration(resolved);
   const opencodeIntegration = detectOpencodeIntegration(resolved);
   const ghosttyThemesDir = join(resolved.configHome, "ghostty", "themes");
+  const warpThemesDir = warpIntegration.themesDir;
   const tmuxThemesDir = join(resolved.homeDir, ".tmux", "themes");
   const nvimDir = join(resolved.dataHome, "nvim", "site", "pack", "theme-tape", "start");
   const yaziFlavorsDir = join(resolved.configHome, "yazi", "flavors");
@@ -378,6 +397,7 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
     themeTapeConfig: createDoctorPath(detectThemeTapeConfigPath(resolved)),
     transparencyMode: config.transparencyMode,
     ghosttyConfig: createDoctorPath(ghosttyIntegration.configPath),
+    warpThemesDir: createDoctorPath(warpIntegration.themesDir),
     tmuxConfig: createDoctorPath(tmuxIntegration.configPath),
     tmuxManagedConfig: createDoctorPath(tmuxIntegration.managedConfigPath),
     tmuxStateFile: createDoctorPath(join(resolved.homeDir, ".tmux", "theme_state")),
@@ -399,6 +419,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         distDir: createDoctorPath(theme.distDir),
         ghosttyDarkAsset: createDoctorPath(join(theme.distDir, "ghostty", `${theme.ghosttyThemeBase}-dark`)),
         ghosttyLightAsset: createDoctorPath(join(theme.distDir, "ghostty", `${theme.ghosttyThemeBase}-light`)),
+        warpDarkAsset: createDoctorPath(join(theme.distDir, "warp", `${theme.id}-dark.yaml`)),
+        warpLightAsset: createDoctorPath(join(theme.distDir, "warp", `${theme.id}-light.yaml`)),
         tmuxDarkAsset: createDoctorPath(join(theme.distDir, "tmux", `${theme.tmuxThemeBase}-dark.conf`)),
         tmuxLightAsset: createDoctorPath(join(theme.distDir, "tmux", `${theme.tmuxThemeBase}-light.conf`)),
         nvimPluginAsset: createDoctorPath(join(theme.distDir, "nvim", theme.nvimPluginDir)),
@@ -408,6 +430,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         opencodeLightAsset: createDoctorPath(join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-light.json`)),
         ghosttyDarkLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-dark`)),
         ghosttyLightLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-light`)),
+        warpDarkLink: createDoctorPath(join(warpThemesDir, `${theme.id}-dark.yaml`)),
+        warpLightLink: createDoctorPath(join(warpThemesDir, `${theme.id}-light.yaml`)),
         tmuxDarkLink: createDoctorPath(join(tmuxThemesDir, `${theme.tmuxThemeBase}-dark.conf`)),
         tmuxLightLink: createDoctorPath(join(tmuxThemesDir, `${theme.tmuxThemeBase}-light.conf`)),
         nvimPluginLink: createDoctorPath(join(nvimDir, theme.nvimPluginDir)),
@@ -434,6 +458,7 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
     `theme-tape config: ${formatDoctorPath(info.themeTapeConfig)}`,
     `transparency mode: ${info.transparencyMode}`,
     `ghostty config: ${formatDoctorPath(info.ghosttyConfig)}`,
+    `warp themes dir: ${formatDoctorPath(info.warpThemesDir)}`,
     `tmux config: ${formatDoctorPath(info.tmuxConfig)}`,
     `tmux managed config: ${formatDoctorPath(info.tmuxManagedConfig)}`,
     `tmux theme_state: ${formatDoctorPath(info.tmuxStateFile)}`,
@@ -457,6 +482,10 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
       `  ghostty asset light: ${formatDoctorPath(theme.ghosttyLightAsset)}`,
       `  ghostty install dark: ${formatDoctorPath(theme.ghosttyDarkLink)}`,
       `  ghostty install light: ${formatDoctorPath(theme.ghosttyLightLink)}`,
+      `  warp asset dark: ${formatDoctorPath(theme.warpDarkAsset)}`,
+      `  warp asset light: ${formatDoctorPath(theme.warpLightAsset)}`,
+      `  warp install dark: ${formatDoctorPath(theme.warpDarkLink)}`,
+      `  warp install light: ${formatDoctorPath(theme.warpLightLink)}`,
       `  tmux asset dark: ${formatDoctorPath(theme.tmuxDarkAsset)}`,
       `  tmux asset light: ${formatDoctorPath(theme.tmuxLightAsset)}`,
       `  tmux install dark: ${formatDoctorPath(theme.tmuxDarkLink)}`,
@@ -517,6 +546,15 @@ export function configureGhostty(options: ManagerOptions = {}): {managedConfig: 
 
   return {
     managedConfig: createDoctorPath(integration.configPath),
+  };
+}
+
+export function configureWarp(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
+  const resolved = resolveOptions(options);
+  const integration = detectWarpIntegration(resolved);
+
+  return {
+    managedConfig: createDoctorPath(integration.themesDir),
   };
 }
 
@@ -582,6 +620,8 @@ export function configureTargets(target: ConfigureTarget = "all", options: Manag
   for (const component of targets) {
     if (component === "ghostty") {
       messages.push(`Configured ghostty: ${configureGhostty(resolved).managedConfig.path}`);
+    } else if (component === "warp") {
+      messages.push(`Configured warp: ${configureWarp(resolved).managedConfig.path}`);
     } else if (component === "tmux") {
       messages.push(`Configured tmux: ${configureTmux(resolved).managedConfig.path}`);
     } else if (component === "nvim") {
@@ -782,6 +822,17 @@ function detectGhosttyIntegration(options: ResolvedOptions): {
   };
 }
 
+function detectWarpIntegration(options: ResolvedOptions): {
+  configRoot: string;
+  themesDir: string;
+} {
+  const configRoot = join(options.homeDir, ".warp");
+  return {
+    configRoot,
+    themesDir: join(configRoot, "themes"),
+  };
+}
+
 function detectTmuxIntegration(options: ResolvedOptions): {
   configPath: string;
   managedConfigPath: string;
@@ -898,8 +949,14 @@ function renderStandardNvimIntegration(transparency: {zenith: boolean; cassette:
     '  return lines[1]',
     'end',
     '',
+    'local function system_mode(default)',
+    '  if vim.loop.os_uname().sysname ~= "Darwin" then return default end',
+    '  local output = vim.fn.system({ "defaults", "read", "-g", "AppleInterfaceStyle" })',
+    '  return vim.v.shell_error == 0 and output:match("Dark") and "dark" or "light"',
+    'end',
+    '',
     'local theme = read_state("theme_name", "zenith")',
-    'local mode = read_state("theme_state", "dark")',
+    'local mode = system_mode(read_state("theme_state", "dark"))',
     'local theme_root = vim.fn.stdpath("data") .. "/site/pack/theme-tape/start"',
     '',
     'vim.opt.runtimepath:append(theme_root .. "/zenith.nvim")',
@@ -932,13 +989,19 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
     '  vim.fn.writefile({ value }, dir .. "/" .. name)',
     'end',
     '',
+    'local function system_mode(default)',
+    '  if vim.loop.os_uname().sysname ~= "Darwin" then return default end',
+    '  local output = vim.fn.system({ "defaults", "read", "-g", "AppleInterfaceStyle" })',
+    '  return vim.v.shell_error == 0 and output:match("Dark") and "dark" or "light"',
+    'end',
+    '',
     'local theme = read_state("theme_name", "zenith")',
-    'local mode = read_state("theme_state", "dark")',
+    'local mode = system_mode(read_state("theme_state", "dark"))',
     'local theme_root = vim.fn.stdpath("data") .. "/site/pack/theme-tape/start"',
     '',
     'local function refresh_state()',
     '  theme = read_state("theme_name", theme)',
-    '  mode = read_state("theme_state", mode)',
+    '  mode = system_mode(read_state("theme_state", mode))',
     'end',
     '',
     'local function reload_tmux_theme()',
@@ -1014,9 +1077,10 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
     '  },',
     '  {',
     '    "f-person/auto-dark-mode.nvim",',
+    '    lazy = false,',
     '    opts = {',
     '      update_interval = 3000,',
-    '      fallback = "dark",',
+    '      fallback = mode,',
     '      set_dark_mode = function()',
     '        apply_theme("dark")',
     '      end,',
@@ -1024,6 +1088,9 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
     '        apply_theme("light")',
     '      end,',
     '    },',
+    '    config = function(_, opts)',
+    '      require("auto-dark-mode").setup(opts)',
+    '    end,',
     '  },',
     '}',
     '',

@@ -94,6 +94,44 @@ def gen_ghostty_snippet(palette: dict) -> str:
     """)
 
 
+# ─── Warp ──────────────────────────────────────────────────────────
+
+
+def gen_warp(palette: dict, mode: str) -> str:
+    p = palette[mode]
+    ansi = resolve_ansi(palette, palette["ansi_map"], mode)
+    details = "darker" if mode == "dark" else "lighter"
+    title = "Dark" if mode == "dark" else "Light"
+
+    return textwrap.dedent(f"""\
+        name: Cassette Futurism {title}
+        accent: '{p['accent']['orange']}'
+        cursor: '{p['accent']['orange']}'
+        background: '{p['base']['bg']}'
+        foreground: '{p['text']['fg']}'
+        details: {details}
+        terminal_colors:
+          normal:
+            black: '{ansi[0]}'
+            red: '{ansi[1]}'
+            green: '{ansi[2]}'
+            yellow: '{ansi[3]}'
+            blue: '{ansi[4]}'
+            magenta: '{ansi[5]}'
+            cyan: '{ansi[6]}'
+            white: '{ansi[7]}'
+          bright:
+            black: '{ansi[8]}'
+            red: '{ansi[9]}'
+            green: '{ansi[10]}'
+            yellow: '{ansi[11]}'
+            blue: '{ansi[12]}'
+            magenta: '{ansi[13]}'
+            cyan: '{ansi[14]}'
+            white: '{ansi[15]}'
+    """)
+
+
 # ─── Tmux ──────────────────────────────────────────────────────────
 
 
@@ -390,13 +428,14 @@ def gen_nvim_theme() -> str:
 
         function M.setup(p, config)
           local set = vim.api.nvim_set_hl
+          local t = config.transparent
 
           -- ── Editor UI ──
           set(0, "Normal",           { fg = p.text.fg, bg = config.transparent and "NONE" or p.base.bg })
           set(0, "NormalNC",         { fg = config.dim_inactive and p.text.comment or p.text.fg, bg = config.transparent and "NONE" or (config.dim_inactive and p.base.bg_dim or p.base.bg) })
-          set(0, "NormalFloat",      { fg = p.text.fg, bg = p.base.bg2 })
-          set(0, "FloatBorder",      { fg = p.base.border, bg = p.base.bg2 })
-          set(0, "FloatTitle",       { fg = p.accent.orange, bg = p.base.bg2, bold = true })
+          set(0, "NormalFloat",      { fg = p.text.fg, bg = t and "NONE" or p.base.bg2 })
+          set(0, "FloatBorder",      { fg = p.base.border, bg = t and "NONE" or p.base.bg2 })
+          set(0, "FloatTitle",       { fg = p.accent.orange, bg = t and "NONE" or p.base.bg2, bold = true })
           set(0, "Cursor",           { fg = p.base.bg, bg = p.accent.orange })
           set(0, "CursorLine",       { bg = p.base.bg4 })
           set(0, "CursorLineNr",     { fg = p.accent.orange, bold = true })
@@ -407,14 +446,14 @@ def gen_nvim_theme() -> str:
           set(0, "Folded",           { fg = p.text.comment, bg = p.base.bg1 })
           set(0, "VertSplit",        { fg = p.base.border })
           set(0, "WinSeparator",     { fg = p.base.border })
-          set(0, "StatusLine",       { fg = p.text.fg_dim, bg = p.base.bg1 })
-          set(0, "StatusLineNC",     { fg = p.text.comment, bg = p.base.bg_dim })
+          set(0, "StatusLine",       { fg = p.text.fg_dim, bg = t and "NONE" or p.base.bg1 })
+          set(0, "StatusLineNC",     { fg = p.text.comment, bg = t and "NONE" or p.base.bg_dim })
           set(0, "WinBar",           { fg = p.text.fg_dim, bg = "NONE" })
           set(0, "WinBarNC",         { fg = p.text.comment, bg = "NONE" })
-          set(0, "TabLine",          { fg = p.text.comment, bg = p.base.bg1 })
-          set(0, "TabLineFill",      { bg = p.base.bg })
-          set(0, "TabLineSel",       { fg = p.accent.orange, bg = p.base.bg, bold = true })
-          set(0, "Pmenu",            { fg = p.text.fg, bg = p.base.bg2 })
+          set(0, "TabLine",          { fg = p.text.comment, bg = t and "NONE" or p.base.bg1 })
+          set(0, "TabLineFill",      { bg = t and "NONE" or p.base.bg })
+          set(0, "TabLineSel",       { fg = p.accent.orange, bg = t and "NONE" or p.base.bg, bold = true })
+          set(0, "Pmenu",            { fg = p.text.fg, bg = t and "NONE" or p.base.bg2 })
           set(0, "PmenuSel",         { fg = p.base.bg, bg = p.accent.orange })
           set(0, "PmenuSbar",        { bg = p.base.bg3 })
           set(0, "PmenuThumb",       { bg = p.accent.orange })
@@ -555,10 +594,10 @@ def gen_nvim_theme() -> str:
           set(0, "DiagnosticUnderlineWarn",  { sp = p.diagnostic.warn, undercurl = true })
           set(0, "DiagnosticUnderlineInfo",  { sp = p.diagnostic.info, undercurl = true })
           set(0, "DiagnosticUnderlineHint",  { sp = p.diagnostic.hint, undercurl = true })
-          set(0, "DiagnosticVirtualTextError", { fg = p.diagnostic.error, bg = p.base.bg1 })
-          set(0, "DiagnosticVirtualTextWarn",  { fg = p.diagnostic.warn, bg = p.base.bg1 })
-          set(0, "DiagnosticVirtualTextInfo",  { fg = p.diagnostic.info, bg = p.base.bg1 })
-          set(0, "DiagnosticVirtualTextHint",  { fg = p.diagnostic.hint, bg = p.base.bg1 })
+          set(0, "DiagnosticVirtualTextError", { fg = p.diagnostic.error, bg = t and "NONE" or p.base.bg1 })
+          set(0, "DiagnosticVirtualTextWarn",  { fg = p.diagnostic.warn, bg = t and "NONE" or p.base.bg1 })
+          set(0, "DiagnosticVirtualTextInfo",  { fg = p.diagnostic.info, bg = t and "NONE" or p.base.bg1 })
+          set(0, "DiagnosticVirtualTextHint",  { fg = p.diagnostic.hint, bg = t and "NONE" or p.base.bg1 })
 
           -- ── Git Signs ──
           set(0, "GitSignsAdd",              { fg = p.git.add })
@@ -575,10 +614,10 @@ def gen_nvim_theme() -> str:
           set(0, "DiffText",                 { bg = p.base.bg3 })
 
           -- ── Telescope ──
-          set(0, "TelescopeNormal",          { fg = p.text.fg, bg = p.base.bg1 })
-          set(0, "TelescopeBorder",          { fg = p.base.border, bg = p.base.bg1 })
-          set(0, "TelescopePromptNormal",    { fg = p.text.fg, bg = p.base.bg2 })
-          set(0, "TelescopePromptBorder",    { fg = p.base.bg2, bg = p.base.bg2 })
+          set(0, "TelescopeNormal",          { fg = p.text.fg, bg = t and "NONE" or p.base.bg1 })
+          set(0, "TelescopeBorder",          { fg = p.base.border, bg = t and "NONE" or p.base.bg1 })
+          set(0, "TelescopePromptNormal",    { fg = p.text.fg, bg = t and "NONE" or p.base.bg2 })
+          set(0, "TelescopePromptBorder",    { fg = p.base.border, bg = t and "NONE" or p.base.bg2 })
           set(0, "TelescopePromptTitle",     { fg = p.base.bg, bg = p.accent.orange, bold = true })
           set(0, "TelescopePreviewTitle",    { fg = p.base.bg, bg = p.accent.blue, bold = true })
           set(0, "TelescopeResultsTitle",    { fg = p.base.bg, bg = p.accent.cyan, bold = true })
@@ -611,8 +650,8 @@ def gen_nvim_theme() -> str:
           set(0, "IblScope",                 { fg = p.accent.orange })
 
           -- ── nvim-tree / neo-tree ──
-          set(0, "NeoTreeNormal",            { fg = p.text.fg, bg = p.base.bg_dim })
-          set(0, "NeoTreeNormalNC",          { fg = p.text.fg, bg = p.base.bg_dim })
+          set(0, "NeoTreeNormal",            { fg = p.text.fg, bg = t and "NONE" or p.base.bg_dim })
+          set(0, "NeoTreeNormalNC",          { fg = p.text.fg, bg = t and "NONE" or p.base.bg_dim })
           set(0, "NeoTreeDirectoryName",     { fg = p.accent.blue })
           set(0, "NeoTreeDirectoryIcon",     { fg = p.accent.blue })
           set(0, "NeoTreeGitAdded",          { fg = p.git.add })
@@ -622,7 +661,7 @@ def gen_nvim_theme() -> str:
           set(0, "NeoTreeRootName",          { fg = p.accent.orange, bold = true })
 
           -- ── Lazy.nvim ──
-          set(0, "LazyButton",               { fg = p.text.fg, bg = p.base.bg2 })
+          set(0, "LazyButton",               { fg = p.text.fg, bg = t and "NONE" or p.base.bg2 })
           set(0, "LazyButtonActive",          { fg = p.base.bg, bg = p.accent.orange, bold = true })
           set(0, "LazyH1",                   { fg = p.base.bg, bg = p.accent.orange, bold = true })
           set(0, "LazySpecial",              { fg = p.accent.cyan })
@@ -652,8 +691,8 @@ def gen_nvim_theme() -> str:
           set(0, "NotifyTRACETitle",         { fg = p.accent.purple })
 
           -- ── Mini plugins ──
-          set(0, "MiniStatuslineFilename",   { fg = p.text.fg_dim, bg = p.base.bg1 })
-          set(0, "MiniStatuslineDevinfo",    { fg = p.text.fg_dim, bg = p.base.bg2 })
+          set(0, "MiniStatuslineFilename",   { fg = p.text.fg_dim, bg = t and "NONE" or p.base.bg1 })
+          set(0, "MiniStatuslineDevinfo",    { fg = p.text.fg_dim, bg = t and "NONE" or p.base.bg2 })
           set(0, "MiniStatuslineModeNormal", { fg = p.base.bg, bg = p.accent.blue, bold = true })
           set(0, "MiniStatuslineModeInsert", { fg = p.base.bg, bg = p.accent.green, bold = true })
           set(0, "MiniStatuslineModeVisual", { fg = p.base.bg, bg = p.accent.purple, bold = true })
@@ -698,10 +737,7 @@ def gen_nvim_init() -> str:
           local palette = require("cassette-futurism.palette")
           local p = palette[style] or palette.dark
 
-          local effective_config = vim.tbl_extend("force", config, {
-            transparent = config.transparent and style == "dark",
-          })
-          require("cassette-futurism.theme").setup(p, effective_config)
+          require("cassette-futurism.theme").setup(p, config)
 
           -- Terminal ANSI colors
           vim.g.terminal_color_0  = p.base.bg1
@@ -1017,6 +1053,10 @@ def main():
     write(DIST / "ghostty" / "cassette-futurism-light", gen_ghostty(palette, "light"))
     write(DIST / "ghostty" / "config-snippet", gen_ghostty_snippet(palette))
 
+    # Warp
+    write(DIST / "warp" / "cassette-futurism-dark.yaml", gen_warp(palette, "dark"))
+    write(DIST / "warp" / "cassette-futurism-light.yaml", gen_warp(palette, "light"))
+
     # Tmux
     write(DIST / "tmux" / "cassette-futurism-dark.conf", gen_tmux(palette, "dark"))
     write(DIST / "tmux" / "cassette-futurism-light.conf", gen_tmux(palette, "light"))
@@ -1047,6 +1087,7 @@ def main():
 
     print("Generated all theme files!")
     print(f"  dist/ghostty/  — 2 theme files + config snippet")
+    print(f"  dist/warp/     — 2 theme files (dark + light)")
     print(f"  dist/tmux/     — 2 theme configs (dark + light)")
     print(f"  dist/yazi/     — 2 theme configs (dark + light)")
     print(f"  dist/nvim/     — cassette-futurism.nvim plugin")

@@ -96,6 +96,44 @@ def gen_ghostty_snippet(palette: dict) -> str:
     """)
 
 
+# ─── Warp ──────────────────────────────────────────────────────────
+
+
+def gen_warp(palette: dict, mode: str) -> str:
+    p = palette[mode]
+    ansi = resolve_ansi(palette, palette["ansi_map"], mode)
+    details = "darker" if mode == "dark" else "lighter"
+    title = "Dark" if mode == "dark" else "Light"
+
+    return textwrap.dedent(f"""\
+        name: Zenith {title}
+        accent: '{p['accent']['purple']}'
+        cursor: '{p['accent']['purple']}'
+        background: '{p['base']['bg']}'
+        foreground: '{p['text']['fg']}'
+        details: {details}
+        terminal_colors:
+          normal:
+            black: '{ansi[0]}'
+            red: '{ansi[1]}'
+            green: '{ansi[2]}'
+            yellow: '{ansi[3]}'
+            blue: '{ansi[4]}'
+            magenta: '{ansi[5]}'
+            cyan: '{ansi[6]}'
+            white: '{ansi[7]}'
+          bright:
+            black: '{ansi[8]}'
+            red: '{ansi[9]}'
+            green: '{ansi[10]}'
+            yellow: '{ansi[11]}'
+            blue: '{ansi[12]}'
+            magenta: '{ansi[13]}'
+            cyan: '{ansi[14]}'
+            white: '{ansi[15]}'
+    """)
+
+
 # ─── Tmux ──────────────────────────────────────────────────────────
 # Generates theme files compatible with user's existing tmux.conf
 # Uses @tape_* variable convention so it drops in seamlessly
@@ -1016,6 +1054,10 @@ def main():
     write(DIST / "ghostty" / "zenith-light", gen_ghostty(palette, "light"))
     write(DIST / "ghostty" / "config-snippet", gen_ghostty_snippet(palette))
 
+    # Warp
+    write(DIST / "warp" / "zenith-dark.yaml", gen_warp(palette, "dark"))
+    write(DIST / "warp" / "zenith-light.yaml", gen_warp(palette, "light"))
+
     # Tmux
     write(DIST / "tmux" / "zenith-dark.conf", gen_tmux(palette, "dark"))
     write(DIST / "tmux" / "zenith-light.conf", gen_tmux(palette, "light"))
@@ -1046,6 +1088,7 @@ def main():
 
     print("Generated all theme files!")
     print(f"  dist/ghostty/  — 2 theme files + config snippet")
+    print(f"  dist/warp/     — 2 theme files (dark + light)")
     print(f"  dist/tmux/     — 2 theme configs (dark + light)")
     print(f"  dist/yazi/     — 2 theme configs (dark + light)")
     print(f"  dist/nvim/     — zenith.nvim plugin")

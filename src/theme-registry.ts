@@ -4,7 +4,7 @@ import {fileURLToPath} from "node:url";
 
 export type ThemeId = string;
 export type Mode = "dark" | "light";
-export type ComponentId = "ghostty" | "tmux" | "nvim" | "yazi" | "opencode";
+export type ComponentId = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode";
 
 interface ThemeManifest {
   id: string;
@@ -37,6 +37,7 @@ export interface ThemeSpec {
 const sourceDir = dirname(fileURLToPath(import.meta.url));
 
 export const REPO_ROOT = resolveRepoRoot();
+const KNOWN_COMPONENTS: ComponentId[] = ["ghostty", "warp", "tmux", "nvim", "yazi", "opencode"];
 export const ALL_COMPONENTS: ComponentId[] = ["ghostty", "tmux", "nvim", "yazi", "opencode"];
 export const THEMES = loadThemes(REPO_ROOT);
 export const THEME_ORDER = Object.values(THEMES)
@@ -101,7 +102,7 @@ export function resolveComponents(raw?: string): ComponentId[] {
   }
 
   for (const component of components) {
-    if (!ALL_COMPONENTS.includes(component as ComponentId)) {
+    if (!KNOWN_COMPONENTS.includes(component as ComponentId)) {
       throw new Error(`Unknown component: ${component}`);
     }
   }

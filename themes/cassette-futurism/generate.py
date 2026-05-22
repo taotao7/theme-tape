@@ -816,13 +816,30 @@ def gen_nvim_lualine(palette: dict) -> str:
 
 
 def gen_opencode(palette: dict, mode: str) -> str:
-    """Generate an opencode TUI theme (JSON) for the given mode."""
+    """Generate an opencode TUI theme (JSON) for the given mode.
+
+    Color hygiene:
+      - Distinct roles per accent (orange/yellow/green/cyan/purple/pink) avoid collisions
+        in the TUI even when the underlying palette aliases blue→cyan (dark) or
+        pink→deep-red (light).
+      - In LIGHT mode, palette `pink` (#cc241d) is too close to `error` (#9d0006), so
+        operator/image roles use `purple` and special-emphasis uses `yellow`.
+      - In DARK mode, palette `blue` aliases `cyan`, so function/linkText roles use
+        `purple` to stay distinct from the cyan accent.
+    """
     p = palette[mode]
     b = p["base"]
     t = p["text"]
     a = p["accent"]
     d = p["diagnostic"]
     g = p["git"]
+
+    # Role-clean accent picks: function and link-text get a non-cyan, non-orange tone
+    # that survives both palettes (dark blue==cyan, light pink==red).
+    function_color = a["purple"]    # dark: #bd93f9, light: #b16286 — distinct in both modes
+    operator_color = a["purple"]    # avoid light-mode #cc241d collision with error red
+    image_color = a["purple"]       # same reason
+    code_block_color = a["yellow"]  # avoid 3-way duplicate with secondary/string in light
 
     theme = {
         "primary": a["orange"],
@@ -860,26 +877,26 @@ def gen_opencode(palette: dict, mode: str) -> str:
         "markdownText": t["fg"],
         "markdownHeading": a["orange"],
         "markdownLink": a["cyan"],
-        "markdownLinkText": a["blue"],
-        "markdownCode": a["orange"],
+        "markdownLinkText": function_color,
+        "markdownCode": a["yellow"],
         "markdownBlockQuote": t["fg_dim"],
         "markdownEmph": a["yellow"],
         "markdownStrong": a["orange"],
         "markdownHorizontalRule": t["comment"],
         "markdownListItem": a["cyan"],
-        "markdownListEnumeration": a["cyan"],
-        "markdownImage": a["pink"],
+        "markdownListEnumeration": a["green"],
+        "markdownImage": image_color,
         "markdownImageText": t["fg"],
-        "markdownCodeBlock": a["green"],
+        "markdownCodeBlock": code_block_color,
 
         "syntaxComment": t["comment"],
         "syntaxKeyword": a["orange"],
-        "syntaxFunction": a["blue"],
+        "syntaxFunction": function_color,
         "syntaxVariable": t["fg"],
         "syntaxString": a["green"],
         "syntaxNumber": a["orange"],
         "syntaxType": a["yellow"],
-        "syntaxOperator": a["pink"],
+        "syntaxOperator": operator_color,
         "syntaxPunctuation": t["fg_dim"],
     }
 

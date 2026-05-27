@@ -345,11 +345,11 @@ def gen_yazi(palette: dict, mode: str) -> str:
           {{ mime = "application/x-7z-compressed",  fg = "{a['orange']}" }},
           {{ mime = "application/x-rar",            fg = "{a['orange']}" }},
           {{ mime = "application/pdf",              fg = "{a['red']}" }},
-          {{ name = "*", is = "exec",               fg = "{a['green']}" }},
-          {{ name = "*", is = "orphan",             fg = "{d['error']}", underline = true }},
-          {{ name = "*", is = "link",               fg = "{a['cyan']}" }},
-          {{ name = "*/",                           fg = "{a['blue']}" }},
-          {{ name = "*",                            fg = "{t['fg']}" }},
+          {{ url = "*", is = "exec",               fg = "{a['green']}" }},
+          {{ url = "*", is = "orphan",             fg = "{d['error']}", underline = true }},
+          {{ url = "*", is = "link",               fg = "{a['cyan']}" }},
+          {{ url = "*/",                           fg = "{a['blue']}" }},
+          {{ url = "*",                            fg = "{t['fg']}" }},
         ]
     """)
 

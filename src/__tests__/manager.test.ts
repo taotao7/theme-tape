@@ -224,7 +224,9 @@ describe("theme-tape manager", () => {
     expect(readFileSync(join(root, ".config/tmux/tmux.conf"), "utf8")).not.toContain("zenith-dark.conf");
     const tmuxManagedConfig = readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8");
     expect(tmuxManagedConfig).toContain("theme-tape managed");
-    expect(tmuxManagedConfig).toContain(join(root, ".tmux/themes/cassette-futurism-light.conf"));
+    expect(tmuxManagedConfig).toContain(`source-file ${join(root, ".tmux/themes/cassette-futurism-dark.conf")}`);
+    expect(tmuxManagedConfig).toContain(`source-file ${join(root, ".tmux/themes/cassette-futurism-light.conf")}`);
+    expect(tmuxManagedConfig).toContain('grep -q dark ~/.tmux/theme_state');
     expect(tmuxManagedConfig).toContain('status-style "bg=default,fg=#{@tape_fg}"');
     expect(tmuxManagedConfig).toContain('@mode_indicator_empty_mode_style "bg=default,fg=#{@tape_purple},bold"');
     expect(tmuxManagedConfig).not.toContain("tmux source-file");

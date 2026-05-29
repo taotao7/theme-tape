@@ -566,7 +566,7 @@ export function configureTmux(options: ManagerOptions = {}): {managedConfig: Doc
 
   writeManagedFile(
     integration.managedConfigPath,
-    renderTmuxManagedConfig(state.theme, state.mode, config.transparencyMode, resolved),
+    renderTmuxManagedConfig(state.theme, config.transparencyMode, resolved),
     resolved,
   );
   cleanupLegacyTmuxConfig(integration.configPath, resolved);
@@ -1099,12 +1099,14 @@ function renderAstroNvimIntegration(transparency: {zenith: boolean; cassette: bo
 
 function renderTmuxManagedConfig(
   themeId: ThemeId,
-  mode: Mode,
   transparencyMode: TransparencyMode,
   options: ResolvedOptions,
 ): string {
   const transparent = transparencyMode !== "opaque";
-  const themeFile = join(options.homeDir, ".tmux", "themes", `${THEMES[themeId].tmuxThemeBase}-${mode}.conf`);
+  const base = THEMES[themeId].tmuxThemeBase;
+  const themesDir = join(options.homeDir, ".tmux", "themes");
+  const darkFile = join(themesDir, `${base}-dark.conf`);
+  const lightFile = join(themesDir, `${base}-light.conf`);
   const statusStyle = transparent ? "bg=default,fg=#{@tape_fg}" : "bg=#{@tape_bg},fg=#{@tape_fg}";
   const emptyModeStyle = transparent ? "bg=default,fg=#{@tape_purple},bold" : "bg=#{@tape_purple},fg=#{@tape_dark},bold";
 
@@ -1112,7 +1114,10 @@ function renderTmuxManagedConfig(
     "# theme-tape managed",
     "if-shell \"test ! -f ~/.tmux/theme_state\" \"run-shell 'mkdir -p ~/.tmux && echo dark > ~/.tmux/theme_state'\"",
     `if-shell "test ! -f ~/.tmux/theme_name" "run-shell 'mkdir -p ~/.tmux && echo ${DEFAULT_THEME_ID} > ~/.tmux/theme_name'"`,
-    `if-shell "test -f ${themeFile}" "source-file ${themeFile}"`,
+    // Select the palette dynamically from theme_state so re-sourcing always
+    // tracks the live mode (prefix+T toggle, nvim auto-dark-mode hook, etc.),
+    // rather than a mode baked in at generation time.
+    `if-shell "grep -q dark ~/.tmux/theme_state" "source-file ${darkFile}" "source-file ${lightFile}"`,
     `set -g status-style "${statusStyle}"`,
     `set -g @mode_indicator_empty_mode_style "${emptyModeStyle}"`,
     "",

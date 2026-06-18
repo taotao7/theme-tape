@@ -277,6 +277,71 @@ describe("theme-tape manager", () => {
     );
     expect(transparentTheme.theme.background).toBe("none");
     expect(transparentTheme.theme.backgroundPanel).toBe("none");
+    expect(transparentTheme.theme.backgroundElement).not.toBe("none");
+    expect(transparentTheme.theme.backgroundElement).toMatch(/^#/);
+    expect(transparentTheme.theme.backgroundMenu).not.toBe("none");
+    expect(transparentTheme.theme.backgroundMenu).toMatch(/^#/);
+
+    applyTheme("zenith", "dark", ["opencode"], {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const transparentDarkTheme = JSON.parse(
+      readFileSync(join(root, ".config/opencode/themes/zenith-dark.json"), "utf8"),
+    );
+    expect(transparentDarkTheme.theme.background).toBe("none");
+    expect(transparentDarkTheme.theme.backgroundPanel).toBe("none");
+    expect(transparentDarkTheme.theme.backgroundElement).toBe("#2e2e4a");
+    expect(transparentDarkTheme.theme.backgroundMenu).toBe("#383860");
+  });
+
+  test("keeps opencode light themes opaque in auto transparency mode", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-opencode-auto-"));
+    created.push(root);
+
+    setTransparencyMode("auto", {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    applyTheme("cassette-futurism", "light", ["opencode"], {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const lightTheme = JSON.parse(
+      readFileSync(join(root, ".config/opencode/themes/cassette-futurism-light.json"), "utf8"),
+    );
+    expect(lightTheme.theme.background).not.toBe("none");
+    expect(lightTheme.theme.backgroundPanel).not.toBe("none");
+
+    applyTheme("cassette-futurism", "dark", ["opencode"], {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const darkTheme = JSON.parse(
+      readFileSync(join(root, ".config/opencode/themes/cassette-futurism-dark.json"), "utf8"),
+    );
+    expect(darkTheme.theme.background).toBe("none");
+    expect(darkTheme.theme.backgroundPanel).toBe("none");
   });
 
   test("stores transparency config and applies opaque mode", () => {

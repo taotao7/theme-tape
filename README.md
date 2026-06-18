@@ -122,7 +122,9 @@ theme-tape apply --theme zenith --mode dark
 
 - installs theme JSONs into `~/.config/opencode/themes`
 - manages `~/.config/opencode/tui.json`
-- sets `background`/`backgroundPanel`/`backgroundElement` to `"none"` when transparency is enabled
+- in `auto` transparency mode, keeps light OpenCode themes opaque and makes dark OpenCode themes transparent
+- explicit `theme-tape config transparent` sets `background`/`backgroundPanel` to `"none"`, while keeping elevated `backgroundElement`/`backgroundMenu` colors so floating overlays like the Ctrl+P picker stay readable
+- OpenCode needs terminal truecolor for the full palette; if colors look crushed, check that `echo $COLORTERM` prints `truecolor` or `24bit`
 
 ## Adding themes
 

@@ -833,6 +833,8 @@ def gen_opencode(palette: dict, mode: str) -> str:
     a = p["accent"]
     d = p["diagnostic"]
     g = p["git"]
+    element_bg = b["bg3"] if mode == "dark" else b["bg2"]
+    menu_bg = b["bg4"] if mode == "dark" else b["bg2"]
 
     # Role-clean accent picks: function and link-text get a non-cyan, non-orange tone
     # that survives both palettes (dark blue==cyan, light pink==red).
@@ -855,7 +857,8 @@ def gen_opencode(palette: dict, mode: str) -> str:
 
         "background": b["bg"],
         "backgroundPanel": b["bg1"],
-        "backgroundElement": b["bg2"],
+        "backgroundElement": element_bg,
+        "backgroundMenu": menu_bg,
 
         "border": b["border"],
         "borderActive": a["orange"],

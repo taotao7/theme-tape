@@ -877,7 +877,7 @@ function writeOpencodeThemeFile(theme: ThemeSpec, mode: Mode, options: ResolvedO
   }
 
   const config = readThemeTapeConfig(options);
-  const transparent = shouldOpencodeBeTransparent(theme.id, config.transparencyMode);
+  const transparent = shouldOpencodeBeTransparent(theme.id, mode, config.transparencyMode);
   const raw = JSON.parse(readFileSync(sourcePath, "utf8")) as {
     $schema?: string;
     theme: Record<string, string>;
@@ -886,7 +886,6 @@ function writeOpencodeThemeFile(theme: ThemeSpec, mode: Mode, options: ResolvedO
   if (transparent) {
     raw.theme.background = "none";
     raw.theme.backgroundPanel = "none";
-    raw.theme.backgroundElement = "none";
   }
 
   const targetDir = detectOpencodeIntegration(options).themesDir;
@@ -905,16 +904,20 @@ function renderOpencodeTuiJson(themeId: ThemeId, mode: Mode): string {
   )}\n`;
 }
 
-function shouldOpencodeBeTransparent(themeId: ThemeId, mode: TransparencyMode): boolean {
-  if (mode === "transparent") {
+function shouldOpencodeBeTransparent(themeId: ThemeId, themeMode: Mode, transparencyMode: TransparencyMode): boolean {
+  if (transparencyMode === "transparent") {
     return true;
   }
 
-  if (mode === "opaque") {
+  if (transparencyMode === "opaque") {
     return false;
   }
 
-  return resolveThemeTransparency(mode)[themeId === "cassette-futurism" ? "cassette" : "zenith"];
+  if (themeMode === "light") {
+    return false;
+  }
+
+  return resolveThemeTransparency(transparencyMode)[themeId === "cassette-futurism" ? "cassette" : "zenith"];
 }
 
 function detectNvimIntegration(options: ResolvedOptions): {

@@ -126,6 +126,27 @@ theme-tape apply --theme zenith --mode dark
 - explicit `theme-tape config transparent` sets `background`/`backgroundPanel` to `"none"`, while keeping elevated `backgroundElement`/`backgroundMenu` colors so floating overlays like the Ctrl+P picker stay readable
 - OpenCode needs terminal truecolor for the full palette; if colors look crushed, check that `echo $COLORTERM` prints `truecolor` or `24bit`
 
+## Codex (OpenAI Codex app)
+
+The Codex desktop app can import a theme from a `codex-theme-v1:` string. Paste one of the strings below into Codex's theme importer to get the `cassette-futurism` palette.
+
+> [!NOTE]
+> Codex currently validates `codeThemeId` against its built-in syntax-highlight themes, so a custom id like `cassette-futurism` is rejected and the **Import theme** button stays disabled ([openai/codex#14766](https://github.com/openai/codex/issues/14766)). The strings below therefore use `gruvbox` as `codeThemeId` (closest retro/beige highlight set). This only affects code syntax highlighting — the window `surface`/`ink`/`accent`/diff colors are all the cassette-futurism palette. Swap `gruvbox` for `everforest` or any built-in id if you prefer a different highlight base.
+
+**Light — "Beige Terminal"**
+
+```
+codex-theme-v1:{"codeThemeId":"gruvbox","theme":{"accent":"#d65d0e","contrast":45,"fonts":{"code":"Iosevka Nerd Font Mono","ui":null},"ink":"#2d2a27","opaqueWindows":false,"semanticColors":{"diffAdded":"#458588","diffRemoved":"#9d0006","skill":"#b16286"},"surface":"#f5f0e8"},"variant":"light"}
+```
+
+**Dark — "Magnetic Night"**
+
+```
+codex-theme-v1:{"codeThemeId":"gruvbox","theme":{"accent":"#ffb86c","contrast":45,"fonts":{"code":"Iosevka Nerd Font Mono","ui":null},"ink":"#d4d4d4","opaqueWindows":false,"semanticColors":{"diffAdded":"#50fa7b","diffRemoved":"#ff5555","skill":"#ff79c6"},"surface":"#1a1d21"},"variant":"dark"}
+```
+
+Colors are sourced from `themes/cassette-futurism/palette.toml`: `surface`←base bg, `ink`←text fg, `accent`←the amber/orange glow, `diffAdded`/`diffRemoved`←git add/delete, `skill`←pink/purple accent.
+
 ## Adding themes
 
 Themes are discovered from `themes/*/theme.json`. Each theme directory can ship assets for:

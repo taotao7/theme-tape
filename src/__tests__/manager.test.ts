@@ -387,5 +387,6 @@ describe("theme-tape manager", () => {
     expect(tmuxDark).toContain('set -g @tape_green "#7fb081"');
     expect(tmuxDark).toContain('set -g mode-style "bg=#{@tape_dark},fg=#{@tape_orange},bold"');
     expect(tmuxDark).toContain('set -g message-style "bg=#{@tape_dark},fg=#{@tape_green},border-style=double"');
+    expect(tmuxDark).toContain("setw -g pane-border-lines double");
   });
 });

@@ -220,6 +220,7 @@ def gen_tmux(palette: dict, mode: str) -> str:
         set -g message-command-style "bg={tmux['message_command_bg']},fg={tmux['message_command_fg']}"
         setw -g pane-active-border-style "fg={tmux['pane_active_fg']},bg=default"
         setw -g pane-border-style "fg=#{{@tape_gray}},bg=default"
+        setw -g pane-border-lines double
 
         # Copy mode styling
         setw -g mode-style "bg={tmux['mode_bg']},fg={tmux['mode_fg']},bold"

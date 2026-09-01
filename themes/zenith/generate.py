@@ -189,6 +189,7 @@ def gen_tmux(palette: dict, mode: str) -> str:
         set -g message-command-style "bg=#{{@tape_dark}},fg=#{{@tape_orange}}"
         setw -g pane-active-border-style "fg=#{{@tape_cyan}},bg=default"
         setw -g pane-border-style "fg=#{{@tape_gray}},bg=default"
+        setw -g pane-border-lines double
 
         # Copy mode styling
         setw -g mode-style "bg=#{{@tape_cyan}},fg=#{{@tape_dark}},bold"

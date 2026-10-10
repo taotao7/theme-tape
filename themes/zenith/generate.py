@@ -37,6 +37,13 @@ def resolve_ansi(palette: dict, ansi_map: dict, mode: str) -> dict[int, str]:
     for i in range(16):
         path = ansi_map[f"color{i}"]
         result[i] = resolve(mode_pal, path)
+    if mode == "light":
+        # ansi_map is the dark-mode convention: black tracks the surface and
+        # bright black tracks the pale comment. On a light page those two
+        # slots are what CLIs use for body text and muted text, so they
+        # have to stay dark ink.
+        result[0] = mode_pal["text"]["fg"]
+        result[8] = mode_pal["text"]["fg_dim"]
     return result
 
 
@@ -153,10 +160,19 @@ def gen_tmux(palette: dict, mode: str) -> str:
         tape_bg = "default"
         tape_active_bg = "#{@tape_cyan}"
         tape_active_fg = "#{@tape_dark}"
+        tape_gray = p["text"]["comment"]
+        window_style = ""
     else:
         tape_bg = p["base"]["bg"]
         tape_active_bg = "#{@tape_orange}"
         tape_active_fg = "#{@tape_bg}"
+        # Comment gray sits too close to a light page. Secondary ink stays readable.
+        tape_gray = p["text"]["fg_dim"]
+        window_style = (
+            '\n# Light page: default pane text is ink, not a washed gray.\n'
+            'set -g window-style "fg=#{@tape_fg},bg=default"\n'
+            'set -g window-active-style "fg=#{@tape_fg},bg=default"\n'
+        )
 
     return textwrap.dedent(f"""\
         # --- Zenith: {mode.title()} Mode ---
@@ -174,7 +190,7 @@ def gen_tmux(palette: dict, mode: str) -> str:
         set -g @tape_blue "{p['accent']['blue']}"
         set -g @tape_purple "{p['accent']['purple']}"
         set -g @tape_pink "{p['accent']['pink']}"
-        set -g @tape_gray "{p['text']['comment']}"
+        set -g @tape_gray "{tape_gray}"
         set -g @tape_dark "{p['base']['bg1']}"
         set -g @tape_void "{p['base']['bg']}"
         set -g @tape_active_bg "{tape_active_bg}"
@@ -193,7 +209,7 @@ def gen_tmux(palette: dict, mode: str) -> str:
 
         # Copy mode styling
         setw -g mode-style "bg=#{{@tape_cyan}},fg=#{{@tape_dark}},bold"
-    """)
+    """) + window_style
 
 
 def gen_tmux_truecolor() -> str:
@@ -726,8 +742,15 @@ def gen_nvim_init() -> str:
           -- Apply highlight groups
           require("zenith.theme").setup(p, config)
 
-          -- Apply terminal ANSI colors
-          vim.g.terminal_color_0  = p.base.bg1
+          -- Apply terminal ANSI colors.
+          -- Light pages: black and bright-black are ink, not the paper.
+          local ansi_black = p.base.bg1
+          local ansi_bright_black = p.text.comment
+          if style == "light" then
+            ansi_black = p.text.fg
+            ansi_bright_black = p.text.fg_dim
+          end
+          vim.g.terminal_color_0  = ansi_black
           vim.g.terminal_color_1  = p.accent.red
           vim.g.terminal_color_2  = p.accent.green
           vim.g.terminal_color_3  = p.accent.yellow
@@ -735,7 +758,7 @@ def gen_nvim_init() -> str:
           vim.g.terminal_color_5  = p.accent.purple
           vim.g.terminal_color_6  = p.accent.cyan
           vim.g.terminal_color_7  = p.text.fg
-          vim.g.terminal_color_8  = p.text.comment
+          vim.g.terminal_color_8  = ansi_bright_black
           vim.g.terminal_color_9  = p.accent.red
           vim.g.terminal_color_10 = p.accent.green
           vim.g.terminal_color_11 = p.accent.yellow

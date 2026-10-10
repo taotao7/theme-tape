@@ -36,6 +36,13 @@ def resolve_ansi(palette: dict, ansi_map: dict, mode: str) -> dict[int, str]:
     for i in range(16):
         path = ansi_map[f"color{i}"]
         result[i] = resolve(mode_pal, path)
+    if mode == "light":
+        # ansi_map is the dark-mode convention: black tracks the surface and
+        # bright black tracks the pale comment. On a light page those two
+        # slots are what CLIs use for body text and muted text, so they
+        # have to stay dark ink.
+        result[0] = mode_pal["text"]["fg"]
+        result[8] = mode_pal["text"]["fg_dim"]
     return result
 
 
@@ -175,7 +182,7 @@ def gen_tmux(palette: dict, mode: str) -> str:
             "blue": p["accent"]["blue"],
             "purple": p["accent"]["purple"],
             "pink": p["accent"]["pink"],
-            "gray": p["text"]["comment"],
+            "gray": p["text"]["fg_dim"],
             "dark": p["base"]["bg1"],
             "void": p["base"]["bg"],
             "active_bg": "#{@tape_orange}",
@@ -188,6 +195,16 @@ def gen_tmux(palette: dict, mode: str) -> str:
             "message_command_fg": "#{@tape_orange}",
             "pane_active_fg": "#{@tape_orange}",
         }
+
+    # Unstyled pane text follows ink. Light mode must not inherit a gray
+    # default; muted chrome uses @tape_gray (fg_dim), which still clears the page.
+    window_style = ""
+    if mode == "light":
+        window_style = (
+            '\n# Light page: default pane text is ink, not a washed gray.\n'
+            'set -g window-style "fg=#{@tape_fg},bg=default"\n'
+            'set -g window-active-style "fg=#{@tape_fg},bg=default"\n'
+        )
 
     return textwrap.dedent(f"""\
         # --- Cassette Futurism: {mode.title()} Mode ---
@@ -224,7 +241,7 @@ def gen_tmux(palette: dict, mode: str) -> str:
 
         # Copy mode styling
         setw -g mode-style "bg={tmux['mode_bg']},fg={tmux['mode_fg']},bold"
-    """)
+    """) + window_style
 
 
 def gen_tmux_truecolor() -> str:
@@ -740,8 +757,15 @@ def gen_nvim_init() -> str:
 
           require("cassette-futurism.theme").setup(p, config)
 
-          -- Terminal ANSI colors
-          vim.g.terminal_color_0  = p.base.bg1
+          -- Terminal ANSI colors.
+          -- Light pages: black and bright-black are ink, not the paper.
+          local ansi_black = p.base.bg1
+          local ansi_bright_black = p.text.comment
+          if style == "light" then
+            ansi_black = p.text.fg
+            ansi_bright_black = p.text.fg_dim
+          end
+          vim.g.terminal_color_0  = ansi_black
           vim.g.terminal_color_1  = p.accent.red
           vim.g.terminal_color_2  = p.accent.green
           vim.g.terminal_color_3  = p.accent.orange
@@ -749,7 +773,7 @@ def gen_nvim_init() -> str:
           vim.g.terminal_color_5  = p.accent.purple
           vim.g.terminal_color_6  = p.accent.cyan
           vim.g.terminal_color_7  = p.text.fg
-          vim.g.terminal_color_8  = p.text.comment
+          vim.g.terminal_color_8  = ansi_bright_black
           vim.g.terminal_color_9  = p.accent.red
           vim.g.terminal_color_10 = p.accent.green
           vim.g.terminal_color_11 = p.accent.orange

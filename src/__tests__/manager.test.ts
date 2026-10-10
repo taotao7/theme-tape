@@ -388,5 +388,23 @@ describe("theme-tape manager", () => {
     expect(tmuxDark).toContain('set -g mode-style "bg=#{@tape_dark},fg=#{@tape_orange},bold"');
     expect(tmuxDark).toContain('set -g message-style "bg=#{@tape_dark},fg=#{@tape_green},border-style=double"');
     expect(tmuxDark).toContain("setw -g pane-border-lines double");
+    expect(tmuxDark).not.toContain("window-style");
+  });
+
+  test("light mode keeps black and muted text darker than the page", () => {
+    const cassetteGhostty = readFileSync(join(REPO_ROOT, "themes/cassette-futurism/dist/ghostty/cassette-futurism-light"), "utf8");
+    const cassetteTmux = readFileSync(join(REPO_ROOT, "themes/cassette-futurism/dist/tmux/cassette-futurism-light.conf"), "utf8");
+    const zenithGhostty = readFileSync(join(REPO_ROOT, "themes/zenith/dist/ghostty/zenith-light"), "utf8");
+    const zenithTmux = readFileSync(join(REPO_ROOT, "themes/zenith/dist/tmux/zenith-light.conf"), "utf8");
+
+    expect(cassetteGhostty).toContain("palette = 0=#2d2a27");
+    expect(cassetteGhostty).toContain("palette = 8=#6b6560");
+    expect(cassetteTmux).toContain('set -g @tape_gray "#6b6560"');
+    expect(cassetteTmux).toContain('set -g window-active-style "fg=#{@tape_fg},bg=default"');
+
+    expect(zenithGhostty).toContain("palette = 0=#2a2840");
+    expect(zenithGhostty).toContain("palette = 8=#5c5878");
+    expect(zenithTmux).toContain('set -g @tape_gray "#5c5878"');
+    expect(zenithTmux).toContain('set -g window-active-style "fg=#{@tape_fg},bg=default"');
   });
 });

@@ -94,7 +94,7 @@ delete   = "#c83858"
 # ─── ANSI 16-Color Mapping ─────────────────────────────────────────
 # Maps standard ANSI color indices to palette colors.
 # Dark-mode convention. generate.py rewrites color0 and color8 in light
-# mode to text.fg and text.fg_dim: those slots are body and muted text,
+# mode to text.fg: those slots are body and muted text,
 # and a light surface would paint them the same color as the page.
 [ansi_map]
 # index = "palette_path"  (resolved at generation time)
@@ -106,7 +106,7 @@ color4  = "accent.blue"    # Blue
 color5  = "accent.purple"  # Magenta
 color6  = "accent.cyan"    # Cyan
 color7  = "text.fg"        # White → main text
-color8  = "text.comment"   # Bright Black → comments (light mode: text.fg_dim)
+color8  = "text.comment"   # Bright Black → comments (light mode: text.fg)
 color9  = "accent.red"     # Bright Red
 color10 = "accent.green"   # Bright Green
 color11 = "accent.yellow"  # Bright Yellow

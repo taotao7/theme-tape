@@ -398,13 +398,15 @@ describe("theme-tape manager", () => {
     const zenithTmux = readFileSync(join(REPO_ROOT, "themes/zenith/dist/tmux/zenith-light.conf"), "utf8");
 
     expect(cassetteGhostty).toContain("palette = 0=#2d2a27");
-    expect(cassetteGhostty).toContain("palette = 8=#6b6560");
-    expect(cassetteTmux).toContain('set -g @tape_gray "#6b6560"');
+    expect(cassetteGhostty).toContain("palette = 8=#2d2a27");
+    expect(cassetteGhostty).toContain("palette = 255=#433f3b");
+    expect(cassetteTmux).toContain('set -g @tape_gray "#2d2a27"');
     expect(cassetteTmux).toContain('set -g window-active-style "fg=#{@tape_fg},bg=default"');
 
     expect(zenithGhostty).toContain("palette = 0=#2a2840");
-    expect(zenithGhostty).toContain("palette = 8=#5c5878");
-    expect(zenithTmux).toContain('set -g @tape_gray "#5c5878"');
+    expect(zenithGhostty).toContain("palette = 8=#2a2840");
+    expect(zenithGhostty).toContain("palette = 255=#3c3954");
+    expect(zenithTmux).toContain('set -g @tape_gray "#2a2840"');
     expect(zenithTmux).toContain('set -g window-active-style "fg=#{@tape_fg},bg=default"');
   });
 });

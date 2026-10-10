@@ -30,6 +30,24 @@ def resolve(palette: dict, path: str) -> str:
     return obj
 
 
+def light_gray_ramp(fg: str, fg_dim: str) -> dict[int, str]:
+    """Map the 24 xterm grays onto a dark range that stays readable on a light page."""
+
+    def rgb(value: str) -> tuple[int, int, int]:
+        value = value.lstrip("#")
+        return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
+
+    start = rgb(fg)
+    dim = rgb(fg_dim)
+    end = tuple(round(start[i] + (dim[i] - start[i]) * 0.35) for i in range(3))
+    ramp = {}
+    for step, index in enumerate(range(232, 256)):
+        t = step / 23
+        mixed = tuple(round(start[i] + (end[i] - start[i]) * t) for i in range(3))
+        ramp[index] = "#{:02x}{:02x}{:02x}".format(*mixed)
+    return ramp
+
+
 def resolve_ansi(palette: dict, ansi_map: dict, mode: str) -> dict[int, str]:
     """Resolve ANSI 0-15 colors for a given mode."""
     mode_pal = palette[mode]
@@ -43,7 +61,7 @@ def resolve_ansi(palette: dict, ansi_map: dict, mode: str) -> dict[int, str]:
         # slots are what CLIs use for body text and muted text, so they
         # have to stay dark ink.
         result[0] = mode_pal["text"]["fg"]
-        result[8] = mode_pal["text"]["fg_dim"]
+        result[8] = mode_pal["text"]["fg"]
     return result
 
 
@@ -67,6 +85,11 @@ def gen_ghostty(palette: dict, mode: str) -> str:
     ]
     for i in range(16):
         lines.append(f"palette = {i}={ansi[i]}")
+    if mode == "light":
+        # xterm's gray ramp (232-255) is a dark-background scale. On a light
+        # page the upper half is pale gray text. Compress it into ink.
+        for index, color in light_gray_ramp(p["text"]["fg"], p["text"]["fg_dim"]).items():
+            lines.append(f"palette = {index}={color}")
     return "\n".join(lines) + "\n"
 
 
@@ -166,8 +189,8 @@ def gen_tmux(palette: dict, mode: str) -> str:
         tape_bg = p["base"]["bg"]
         tape_active_bg = "#{@tape_orange}"
         tape_active_fg = "#{@tape_bg}"
-        # Comment gray sits too close to a light page. Secondary ink stays readable.
-        tape_gray = p["text"]["fg_dim"]
+        # Comment gray sits too close to a light page. Chrome uses the same ink as body text.
+        tape_gray = p["text"]["fg"]
         window_style = (
             '\n# Light page: default pane text is ink, not a washed gray.\n'
             'set -g window-style "fg=#{@tape_fg},bg=default"\n'
@@ -748,7 +771,7 @@ def gen_nvim_init() -> str:
           local ansi_bright_black = p.text.comment
           if style == "light" then
             ansi_black = p.text.fg
-            ansi_bright_black = p.text.fg_dim
+            ansi_bright_black = p.text.fg
           end
           vim.g.terminal_color_0  = ansi_black
           vim.g.terminal_color_1  = p.accent.red

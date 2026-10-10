@@ -543,6 +543,9 @@ export function configureGhostty(options: ManagerOptions = {}): {managedConfig: 
     upsertConfigLine(integration.configPath, /^background-opacity\s*=.*$/m, "background-opacity = 0.92", resolved);
     upsertConfigLine(integration.configPath, /^background-blur-radius\s*=.*$/m, "background-blur-radius = 20", resolved);
   }
+  // Dim text is drawn at 50% opacity by default. On a light page that turns
+  // ink into the pale gray in the screenshot. Keep faint text solid.
+  upsertConfigLine(integration.configPath, /^faint-opacity\s*=.*$/m, "faint-opacity = 1", resolved);
 
   return {
     managedConfig: createDoctorPath(integration.configPath),

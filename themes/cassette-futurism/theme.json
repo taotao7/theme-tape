@@ -8,5 +8,6 @@
   "nvimPluginDir": "cassette-futurism.nvim",
   "nvimColorscheme": "cassette-futurism",
   "yaziFlavorBase": "cassette-futurism",
-  "opencodeThemeBase": "cassette-futurism"
+  "opencodeThemeBase": "cassette-futurism",
+  "ompThemeBase": "cassette-futurism"
 }

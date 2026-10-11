@@ -16,7 +16,7 @@ export function App() {
   const [actionIndex, setActionIndex] = useState(0);
   const [focus, setFocus] = useState<Focus>("action");
   const [busy, setBusy] = useState(false);
-  const [lines, setLines] = useState<string[]>(["Ready. Enter applies to Ghostty, Tmux, Neovim, and Yazi."]);
+  const [lines, setLines] = useState<string[]>(["Ready. Enter applies to Ghostty, Tmux, Neovim, Yazi, Opencode, and omp."]);
 
   function syncState(nextState: {theme: ThemeId; mode: Mode}, statusLine?: string) {
     setCurrent((previous) => {
@@ -133,7 +133,7 @@ export function App() {
   return (
     <Box flexDirection="column" padding={1}>
       <Text bold>theme-tape</Text>
-      <Text color="gray">Merged theme manager for Ghostty, Tmux, Neovim, and Yazi.</Text>
+      <Text color="gray">Merged theme manager for Ghostty, Tmux, Neovim, Yazi, Opencode, and omp.</Text>
       <Box marginTop={1} flexDirection="column">
         <Selector
           focused={focus === "theme"}
@@ -151,7 +151,7 @@ export function App() {
       <Box marginTop={1} flexDirection="column">
         <Text color="cyan">Shortcuts</Text>
         <Text>Tab cycle focus · j/k move section · q quit</Text>
-        <Text color="gray">Mode=toggle switches dark/light from the current saved state.</Text>
+        <Text color="gray">Mode=toggle switches dark/light state; omp keeps matching dark/light theme slots.</Text>
       </Box>
       <Box marginTop={1} flexDirection="column">
         <Text color={busy ? "yellow" : "green"}>{busy ? "Working..." : "Status"}</Text>

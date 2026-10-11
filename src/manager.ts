@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import {basename, dirname, join, resolve} from "node:path";
+import {Document, isMap, parseDocument} from "yaml";
 import {spawnSync} from "node:child_process";
 import {
   DEFAULT_THEME_ID,
@@ -31,6 +32,7 @@ export interface ManagerOptions {
   configHome?: string;
   dataHome?: string;
   runtimeDir?: string;
+  ompAgentDir?: string;
   dryRun?: boolean;
   reloadTmux?: boolean;
   refreshNeovim?: boolean;
@@ -68,6 +70,8 @@ export interface DoctorThemeInfo {
   yaziLightAsset: DoctorPath;
   opencodeDarkAsset: DoctorPath;
   opencodeLightAsset: DoctorPath;
+  ompDarkAsset: DoctorPath;
+  ompLightAsset: DoctorPath;
   ghosttyDarkLink: DoctorPath;
   ghosttyLightLink: DoctorPath;
   warpDarkLink: DoctorPath;
@@ -79,7 +83,10 @@ export interface DoctorThemeInfo {
   yaziLightLink: DoctorPath;
   opencodeDarkLink: DoctorPath;
   opencodeLightLink: DoctorPath;
+  ompDarkLink: DoctorPath;
+  ompLightLink: DoctorPath;
 }
+
 
 export interface DoctorInfo {
   repoRoot: DoctorPath;
@@ -102,12 +109,17 @@ export interface DoctorInfo {
   nvimManagedConfig: DoctorPath;
   opencodeConfigRoot: DoctorPath;
   opencodeTuiFile: DoctorPath;
+  ompAgentDir: DoctorPath;
+  ompConfigFile: DoctorPath;
+  ompThemesDir: DoctorPath;
+  ompDarkTheme: string;
+  ompLightTheme: string;
   state: ThemeState;
   themes: DoctorThemeInfo[];
 }
 
 export type NvimFlavor = "astronvim" | "neovim";
-export type ConfigureTarget = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "all";
+export type ConfigureTarget = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "omp" | "all";
 export type TransparencyMode = "auto" | "transparent" | "opaque";
 
 export interface ThemeTapeConfig {
@@ -120,11 +132,13 @@ interface ResolvedOptions {
   configHome: string;
   dataHome: string;
   runtimeDir: string;
+  ompAgentDir: string;
   dryRun: boolean;
   reloadTmux: boolean;
   refreshNeovim: boolean;
   logger: (message: string) => void;
 }
+
 
 export type InstallTarget = ThemeId | "all";
 export type ApplyThemeInput = ThemeId | "toggle";
@@ -186,6 +200,9 @@ export function installThemeAssets(
 ): OperationResult {
   const resolved = resolveOptions(options);
   const selectedThemes = target === "all" ? Object.values(THEMES) : [THEMES[target]];
+  if (components.includes("omp")) {
+    parseOmpConfig(resolved);
+  }
   const messages: string[] = [];
 
   for (const theme of selectedThemes) {
@@ -231,6 +248,21 @@ export function installThemeAssets(
       writeOpencodeThemeFile(theme, "light", resolved);
       messages.push(`Opencode themes ready for ${theme.id}`);
     }
+
+    if (components.includes("omp")) {
+      const ompDir = detectOmpIntegration(resolved).themesDir;
+      linkPath(
+        join(theme.distDir, "omp", `${theme.ompThemeBase}-dark.json`),
+        join(ompDir, `${theme.ompThemeBase}-dark.json`),
+        resolved,
+      );
+      linkPath(
+        join(theme.distDir, "omp", `${theme.ompThemeBase}-light.json`),
+        join(ompDir, `${theme.ompThemeBase}-light.json`),
+        resolved,
+      );
+      messages.push(`Omp themes ready for ${theme.id}`);
+    }
   }
 
   // Neovim config references all themes, so always install all nvim plugins
@@ -270,6 +302,11 @@ export function installThemeAssets(
   if (components.includes("opencode")) {
     const integration = configureOpencode(resolved);
     messages.push(`Opencode config ready: ${integration.managedConfig.path}`);
+  }
+
+  if (components.includes("omp")) {
+    const integration = configureOmp(resolved);
+    messages.push(`Omp config ready: ${integration.managedConfig.path}`);
   }
 
   for (const message of messages) {
@@ -328,6 +365,11 @@ export function applyTheme(
     messages.push(`Opencode switched to ${theme.id}-${mode}`);
   }
 
+  if (components.includes("omp")) {
+    writeOmpThemeConfig(theme.id, resolved);
+    messages.push(`Omp switched to ${theme.id} dark/light pair`);
+  }
+
   if (components.includes("tmux") && resolved.reloadTmux) {
     reloadTmux(theme.id, mode, resolved, messages);
   }
@@ -381,12 +423,15 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const yaziIntegration = detectYaziIntegration(resolved);
   const integration = detectNvimIntegration(resolved);
   const opencodeIntegration = detectOpencodeIntegration(resolved);
+  const ompIntegration = detectOmpIntegration(resolved);
+  const ompSelection = readOmpThemeSelection(resolved);
   const ghosttyThemesDir = join(resolved.configHome, "ghostty", "themes");
   const warpThemesDir = warpIntegration.themesDir;
   const tmuxThemesDir = join(resolved.homeDir, ".tmux", "themes");
   const nvimDir = join(resolved.dataHome, "nvim", "site", "pack", "theme-tape", "start");
   const yaziFlavorsDir = join(resolved.configHome, "yazi", "flavors");
   const opencodeThemesDir = opencodeIntegration.themesDir;
+  const ompThemesDir = ompIntegration.themesDir;
 
   return {
     repoRoot: createDoctorPath(resolved.repoRoot),
@@ -409,6 +454,11 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
     nvimManagedConfig: createDoctorPath(integration.managedConfigPath),
     opencodeConfigRoot: createDoctorPath(opencodeIntegration.configRoot),
     opencodeTuiFile: createDoctorPath(opencodeIntegration.tuiPath),
+    ompAgentDir: createDoctorPath(ompIntegration.agentDir),
+    ompConfigFile: createDoctorPath(ompIntegration.configPath),
+    ompThemesDir: createDoctorPath(ompIntegration.themesDir),
+    ompDarkTheme: ompSelection.dark,
+    ompLightTheme: ompSelection.light,
     state,
     themes: THEME_ORDER.map((themeId) => {
       const theme = THEMES[themeId];
@@ -428,6 +478,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         yaziLightAsset: createDoctorPath(join(theme.distDir, "yazi", "flavors", `${theme.yaziFlavorBase}-light.yazi`)),
         opencodeDarkAsset: createDoctorPath(join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-dark.json`)),
         opencodeLightAsset: createDoctorPath(join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-light.json`)),
+        ompDarkAsset: createDoctorPath(join(theme.distDir, "omp", `${theme.ompThemeBase}-dark.json`)),
+        ompLightAsset: createDoctorPath(join(theme.distDir, "omp", `${theme.ompThemeBase}-light.json`)),
         ghosttyDarkLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-dark`)),
         ghosttyLightLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-light`)),
         warpDarkLink: createDoctorPath(join(warpThemesDir, `${theme.id}-dark.yaml`)),
@@ -439,6 +491,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         yaziLightLink: createDoctorPath(join(yaziFlavorsDir, `${theme.yaziFlavorBase}-light.yazi`)),
         opencodeDarkLink: createDoctorPath(join(opencodeThemesDir, `${theme.opencodeThemeBase}-dark.json`)),
         opencodeLightLink: createDoctorPath(join(opencodeThemesDir, `${theme.opencodeThemeBase}-light.json`)),
+        ompDarkLink: createDoctorPath(join(ompThemesDir, `${theme.ompThemeBase}-dark.json`)),
+        ompLightLink: createDoctorPath(join(ompThemesDir, `${theme.ompThemeBase}-light.json`)),
       };
     }),
   };
@@ -470,6 +524,11 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
     `nvim managed config: ${formatDoctorPath(info.nvimManagedConfig)}`,
     `opencode config root: ${formatDoctorPath(info.opencodeConfigRoot)}`,
     `opencode tui.json: ${formatDoctorPath(info.opencodeTuiFile)}`,
+    `omp agent dir: ${formatDoctorPath(info.ompAgentDir)}`,
+    `omp config.yml: ${formatDoctorPath(info.ompConfigFile)}`,
+    `omp themes dir: ${formatDoctorPath(info.ompThemesDir)}`,
+    `omp theme.dark: ${info.ompDarkTheme}`,
+    `omp theme.light: ${info.ompLightTheme}`,
   ];
 
   for (const theme of info.themes) {
@@ -500,6 +559,10 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
       `  opencode asset light: ${formatDoctorPath(theme.opencodeLightAsset)}`,
       `  opencode install dark: ${formatDoctorPath(theme.opencodeDarkLink)}`,
       `  opencode install light: ${formatDoctorPath(theme.opencodeLightLink)}`,
+      `  omp asset dark: ${formatDoctorPath(theme.ompDarkAsset)}`,
+      `  omp asset light: ${formatDoctorPath(theme.ompLightAsset)}`,
+      `  omp install dark: ${formatDoctorPath(theme.ompDarkLink)}`,
+      `  omp install light: ${formatDoctorPath(theme.ompLightLink)}`,
     );
   }
 
@@ -615,6 +678,30 @@ export function configureOpencode(options: ManagerOptions = {}): {managedConfig:
   };
 }
 
+export function configureOmp(options: ManagerOptions = {}): {managedConfig: DoctorPath} {
+  const resolved = resolveOptions(options);
+  const state = readState(resolved);
+  const ompDocument = parseOmpConfig(resolved);
+  const integration = detectOmpIntegration(resolved);
+
+  linkPath(
+    join(THEMES[state.theme].distDir, "omp", `${THEMES[state.theme].ompThemeBase}-dark.json`),
+    join(integration.themesDir, `${THEMES[state.theme].ompThemeBase}-dark.json`),
+    resolved,
+  );
+  linkPath(
+    join(THEMES[state.theme].distDir, "omp", `${THEMES[state.theme].ompThemeBase}-light.json`),
+    join(integration.themesDir, `${THEMES[state.theme].ompThemeBase}-light.json`),
+    resolved,
+  );
+
+  writeOmpThemeDocument(ompDocument, state.theme, integration.configPath, resolved);
+
+  return {
+    managedConfig: createDoctorPath(integration.configPath),
+  };
+}
+
 export function configureTargets(target: ConfigureTarget = "all", options: ManagerOptions = {}): string[] {
   const resolved = resolveOptions(options);
   const targets = target === "all" ? ALL_COMPONENTS : [target];
@@ -634,6 +721,8 @@ export function configureTargets(target: ConfigureTarget = "all", options: Manag
       messages.push(`Configured yazi: ${configureYazi(resolved).managedConfig.path}`);
     } else if (component === "opencode") {
       messages.push(`Configured opencode: ${configureOpencode(resolved).managedConfig.path}`);
+    } else if (component === "omp") {
+      messages.push(`Configured omp: ${configureOmp(resolved).managedConfig.path}`);
     }
   }
 
@@ -679,11 +768,34 @@ function resolveOptions(options: ManagerOptions = {}): ResolvedOptions {
     configHome: options.configHome ?? process.env.XDG_CONFIG_HOME ?? join(homeDir, ".config"),
     dataHome: options.dataHome ?? process.env.XDG_DATA_HOME ?? join(homeDir, ".local", "share"),
     runtimeDir: options.runtimeDir ?? process.env.XDG_RUNTIME_DIR ?? "/tmp",
+    ompAgentDir: resolveOmpAgentDir(options, homeDir),
     dryRun: options.dryRun ?? false,
     reloadTmux: options.reloadTmux ?? true,
     refreshNeovim: options.refreshNeovim ?? true,
     logger: options.logger ?? (() => {}),
   };
+}
+
+function resolveOmpAgentDir(options: ManagerOptions, homeDir: string): string {
+  if (options.ompAgentDir) {
+    return resolve(options.ompAgentDir);
+  }
+
+  const profile = process.env.OMP_PROFILE !== undefined ? process.env.OMP_PROFILE : process.env.PI_PROFILE;
+  if (profile && profile !== "default") {
+    if (!/^[a-z0-9][a-z0-9._-]{0,63}$/.test(profile) || profile === "." || profile === ".." || profile.endsWith(".")) {
+      throw new Error(`Invalid OMP profile "${profile}"`);
+    }
+
+    const configDir = process.env.PI_CONFIG_DIR || ".omp";
+    return join(homeDir, configDir, "profiles", profile, "agent");
+  }
+
+  if (process.env.PI_CODING_AGENT_DIR) {
+    return resolve(process.env.PI_CODING_AGENT_DIR);
+  }
+
+  return join(homeDir, process.env.PI_CONFIG_DIR || ".omp", "agent");
 }
 
 function writeManagedFile(filePath: string, content: string, options: ResolvedOptions): void {
@@ -872,6 +984,74 @@ function detectOpencodeIntegration(options: ResolvedOptions): {
     tuiPath: join(configRoot, "tui.json"),
   };
 }
+
+function detectOmpIntegration(options: ResolvedOptions): {
+  agentDir: string;
+  configPath: string;
+  themesDir: string;
+} {
+  const configPath = join(options.ompAgentDir, "config.yml");
+  const legacyConfigPath = join(options.ompAgentDir, "config.yaml");
+  return {
+    agentDir: options.ompAgentDir,
+    configPath: existsSync(configPath) || !existsSync(legacyConfigPath) ? configPath : legacyConfigPath,
+    themesDir: join(options.ompAgentDir, "themes"),
+  };
+}
+
+type OmpConfigDocument = Document.Parsed;
+
+function parseOmpConfig(options: ResolvedOptions): OmpConfigDocument {
+  const integration = detectOmpIntegration(options);
+  if (!existsSync(integration.configPath)) {
+    return parseDocument("{}\n");
+  }
+
+  const document = parseDocument(readFileSync(integration.configPath, "utf8"));
+  if (document.errors.length > 0) {
+    throw new Error(`Invalid omp config ${integration.configPath}: ${document.errors[0]?.message ?? "YAML parse error"}`);
+  }
+  if (document.contents !== null && !isMap(document.contents)) {
+    throw new Error(`Invalid omp config ${integration.configPath}: top-level value must be a YAML map`);
+  }
+  return document;
+}
+
+function readOmpThemeSelection(options: ResolvedOptions): {dark: string; light: string} {
+  const document = parseOmpConfig(options);
+  const integration = detectOmpIntegration(options);
+  const themeNode = document.get("theme", true);
+  if (themeNode !== undefined && !isMap(themeNode)) {
+    throw new Error(`Invalid omp config ${integration.configPath}: theme must be a YAML map`);
+  }
+
+  const dark = document.getIn(["theme", "dark"]);
+  const light = document.getIn(["theme", "light"]);
+  const nativeDefault = "unset (omp default)";
+  return {
+    dark: typeof dark === "string" && dark.length > 0 ? dark : nativeDefault,
+    light: typeof light === "string" && light.length > 0 ? light : nativeDefault,
+  };
+}
+
+function writeOmpThemeConfig(themeId: ThemeId, options: ResolvedOptions): void {
+  const integration = detectOmpIntegration(options);
+  const document = parseOmpConfig(options);
+  writeOmpThemeDocument(document, themeId, integration.configPath, options);
+}
+
+function writeOmpThemeDocument(document: OmpConfigDocument, themeId: ThemeId, configPath: string, options: ResolvedOptions): void {
+  const themeNode = document.get("theme", true);
+  if (themeNode !== undefined && !isMap(themeNode)) {
+    throw new Error(`Invalid omp config ${configPath}: theme must be a YAML map`);
+  }
+  const themeBase = THEMES[themeId].ompThemeBase;
+  document.setIn(["theme", "dark"], `${themeBase}-dark`);
+  document.setIn(["theme", "light"], `${themeBase}-light`);
+  const serialized = document.toString({lineWidth: 0});
+  writeManagedFile(configPath, serialized.endsWith("\n") ? serialized : `${serialized}\n`, options);
+}
+
 
 function writeOpencodeThemeFile(theme: ThemeSpec, mode: Mode, options: ResolvedOptions): void {
   const sourcePath = join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-${mode}.json`);

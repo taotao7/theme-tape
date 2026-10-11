@@ -1,6 +1,6 @@
 {
   "name": "theme-tape",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,8 @@
   "dependencies": {
     "ink": "^5.2.1",
     "react": "^18.3.1",
-    "react-devtools-core": "^6.1.5"
+    "react-devtools-core": "^6.1.5",
+    "yaml": "^2.9.1"
   },
   "devDependencies": {
     "@types/node": "^22.15.2",

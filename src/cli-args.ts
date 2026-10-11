@@ -44,7 +44,7 @@ export function parseArgs(argv: string[], currentTheme: ApplyThemeInput): Comman
 
   if (command === "configure") {
     const target = (rest[0] ?? "all") as ConfigureTarget;
-    if (!["all", "ghostty", "warp", "tmux", "nvim", "yazi", "opencode"].includes(target)) {
+    if (!["all", "ghostty", "warp", "tmux", "nvim", "yazi", "opencode", "omp"].includes(target)) {
       throw new Error(`Unknown configure target: ${target ?? ""}`);
     }
 

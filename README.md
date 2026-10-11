@@ -1,6 +1,6 @@
 # theme-tape
 
-`theme-tape` is a Bun + Ink TUI and CLI for managing the `cassette-futurism` and `zenith` themes across Ghostty, tmux, Neovim/AstroNvim, Yazi, and opencode from one place.
+`theme-tape` is a Bun + Ink TUI and CLI for managing the `cassette-futurism` and `zenith` themes across Ghostty, tmux, Neovim/AstroNvim, Yazi, opencode, and omp from one place.
 
 ## Preview
 
@@ -18,8 +18,9 @@ Source image URLs:
 - One manager for both themes
 - Interactive TUI plus scriptable CLI
 - Dark, light, and toggle mode switching
-- Managed config generation for Ghostty, tmux, Neovim/AstroNvim, Yazi, and opencode
+- Managed config generation for Ghostty, tmux, Neovim/AstroNvim, Yazi, opencode, and omp
 - Transparency control with `auto`, `transparent`, and `opaque` modes
+- Omp installs both dark/light theme slots while preserving unrelated `config.yml` values and comments
 - `doctor` output for real asset paths, install paths, and detected config locations
 - Manifest-based theme discovery for adding more themes later
 
@@ -38,6 +39,8 @@ bun install
 bun run build
 ./dist/theme-tape --help
 ```
+
+For unreleased changes, run `./theme-tape` from this checkout after building. A Homebrew-installed `theme-tape` loads its bundled theme files, even when run inside this repository; `doctor` reports the active asset root.
 
 ## Quick start
 
@@ -85,7 +88,7 @@ theme-tape state          # print persisted theme + mode
 theme-tape doctor         # print detected paths and install status
 theme-tape build          # regenerate theme outputs
 theme-tape config MODE    # auto | transparent | opaque
-theme-tape configure all  # ghostty | tmux | nvim | yazi | all
+theme-tape configure all  # ghostty | tmux | nvim | yazi | opencode | omp | all
 theme-tape install --theme all --components all
 theme-tape apply --theme zenith --mode dark
 ```
@@ -102,6 +105,8 @@ theme-tape apply --theme zenith --mode dark
 
 - installs theme files into `~/.tmux/themes`
 - manages `~/.tmux/theme-tape.conf`
+- uses each theme's shared `palette.toml`, including Cassette's dark-mode accents, rather than a separate tmux palette
+- on tmux 3.8+, synchronizes native UI colours with the selected theme; chooser selections use the palette's selection surface (`base.bg3`) and body text, while secondary labels use `text.fg_dim`, without inverting the theme's light/dark appearance; older tmux versions ignore the newer options
 - keeps state in:
   - `~/.tmux/theme_state`
   - `~/.tmux/theme_name`
@@ -117,6 +122,14 @@ theme-tape apply --theme zenith --mode dark
 
 - installs flavors into `~/.config/yazi/flavors`
 - manages `~/.config/yazi/theme.toml`
+
+### omp (oh-my-pi)
+
+- installs generated theme JSONs into omp's active agent directory `themes/`
+- manages only `theme.dark` and `theme.light` in `config.yml`, preserving unrelated YAML values, nested fields, flow maps, and comments
+- writes the selected theme family to both slots (`zenith-dark` + `zenith-light`, or `cassette-futurism-dark` + `cassette-futurism-light`); omp continues choosing the slot from the terminal background and can update while running
+- resolves named profiles as `~/.omp/profiles/<OMP_PROFILE>/agent` (a named profile overrides `PI_CODING_AGENT_DIR`); `OMP_PROFILE` takes precedence over legacy `PI_PROFILE`, while the default uses `PI_CODING_AGENT_DIR` when set, otherwise `~/.omp/agent`
+- `theme-tape config transparent|opaque|auto` does not rewrite omp root or panel backgrounds; omp's main canvas follows the terminal, while generated panel/status surfaces remain palette-controlled
 
 ### opencode
 
@@ -156,8 +169,7 @@ Themes are discovered from `themes/*/theme.json`. Each theme directory can ship 
 - Neovim
 - Yazi
 - opencode
-
-This keeps the manager extensible without hardcoding every theme in the CLI.
+- omp
 
 ## Development
 
@@ -166,6 +178,8 @@ bun run typecheck
 bun run test
 bun run build
 ```
+
+Theme generators require Python 3.11 or newer; `theme-tape build` invokes `python3` for both theme directories.
 
 ## License
 

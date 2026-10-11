@@ -168,59 +168,32 @@ def gen_warp(palette: dict, mode: str) -> str:
 def gen_tmux(palette: dict, mode: str) -> str:
     p = palette[mode]
 
-    if mode == "dark":
-        tmux = {
-            "bg": "default",
-            "fg": "#d7d0c2",
-            "red": "#d97a66",
-            "orange": "#d6a168",
-            "yellow": "#c4b16f",
-            "green": "#7fb081",
-            "cyan": "#78a8a4",
-            "blue": "#6f94a6",
-            "purple": "#b08968",
-            "pink": "#c37a63",
-            "gray": "#7b847d",
-            "dark": p["base"]["bg1"],
-            "void": p["base"]["bg"],
-            "active_bg": "#{@tape_orange}",
-            "active_fg": "#{@tape_dark}",
-            "mode_bg": "#{@tape_dark}",
-            "mode_fg": "#{@tape_orange}",
-            "message_bg": "#{@tape_dark}",
-            "message_fg": "#{@tape_green}",
-            "message_command_bg": "#{@tape_dark}",
-            "message_command_fg": "#{@tape_cyan}",
-            "pane_active_fg": "#{@tape_green}",
-        }
-    else:
-        tmux = {
-            "bg": p["base"]["bg"],
-            "fg": p["text"]["fg"],
-            "red": p["accent"]["red"],
-            "orange": p["accent"]["orange"],
-            "yellow": p["accent"]["yellow"],
-            "green": p["accent"]["green"],
-            "cyan": p["accent"]["cyan"],
-            "blue": p["accent"]["blue"],
-            "purple": p["accent"]["purple"],
-            "pink": p["accent"]["pink"],
-            "gray": p["text"]["fg"],
-            "dark": p["base"]["bg1"],
-            "void": p["base"]["bg"],
-            "active_bg": "#{@tape_orange}",
-            "active_fg": "#{@tape_bg}",
-            "mode_bg": "#{@tape_orange}",
-            "mode_fg": "#{@tape_dark}",
-            "message_bg": "#{@tape_dark}",
-            "message_fg": "#{@tape_orange}",
-            "message_command_bg": "#{@tape_dark}",
-            "message_command_fg": "#{@tape_orange}",
-            "pane_active_fg": "#{@tape_orange}",
-        }
+    tmux = {
+        "bg": "default" if mode == "dark" else p["base"]["bg"],
+        "fg": p["text"]["fg"],
+        "red": p["accent"]["red"],
+        "orange": p["accent"]["orange"],
+        "yellow": p["accent"]["yellow"],
+        "green": p["accent"]["green"],
+        "cyan": p["accent"]["cyan"],
+        "blue": p["accent"]["blue"],
+        "purple": p["accent"]["purple"],
+        "pink": p["accent"]["pink"],
+        "gray": p["text"]["fg_dim"] if mode == "dark" else p["text"]["fg"],
+        "dark": p["base"]["bg1"],
+        "void": p["base"]["bg"],
+        "active_bg": "#{@tape_orange}",
+        "active_fg": "#{@tape_dark}" if mode == "dark" else "#{@tape_bg}",
+        "mode_bg": "#{@tape_dark}" if mode == "dark" else "#{@tape_orange}",
+        "mode_fg": "#{@tape_orange}" if mode == "dark" else "#{@tape_dark}",
+        "message_bg": "#{@tape_dark}",
+        "message_fg": "#{@tape_green}" if mode == "dark" else "#{@tape_orange}",
+        "message_command_bg": "#{@tape_dark}",
+        "message_command_fg": "#{@tape_cyan}" if mode == "dark" else "#{@tape_orange}",
+        "pane_active_fg": "#{@tape_green}" if mode == "dark" else "#{@tape_orange}",
+    }
 
-    # Unstyled pane text follows ink. Light mode must not inherit a gray
-    # default; muted chrome uses @tape_gray (fg_dim), which still clears the page.
+    # Unstyled light-mode pane text follows the theme ink.
     window_style = ""
     if mode == "light":
         window_style = (
@@ -250,6 +223,22 @@ def gen_tmux(palette: dict, mode: str) -> str:
         set -g @tape_void "{tmux['void']}"
         set -g @tape_active_bg "{tmux['active_bg']}"
         set -g @tape_active_fg "{tmux['active_fg']}"
+
+        # tmux 3.8+ chooser text uses native theme colours, not window-style.
+        # -q leaves older tmux versions on their existing ANSI colours.
+        set -sq theme {mode}
+        set -sq {mode}-theme-black "#{{@tape_void}}"
+        set -sq {mode}-theme-white "#{{@tape_fg}}"
+        set -sq {mode}-theme-light-grey "{p['text']['fg_dim']}"
+        set -sq {mode}-theme-dark-grey "#{{@tape_dark}}"
+        set -sq {mode}-theme-red "#{{@tape_red}}"
+        set -sq {mode}-theme-green "#{{@tape_green}}"
+        set -sq {mode}-theme-yellow "#{{@tape_yellow}}"
+        set -sq {mode}-theme-blue "#{{@tape_blue}}"
+        set -sq {mode}-theme-cyan "#{{@tape_cyan}}"
+        set -sq {mode}-theme-magenta "#{{@tape_purple}}"
+        setw -gq tree-mode-selection-style "bg={p['base']['bg3']},fg=#{{@tape_fg}},bold"
+        setw -gq tree-mode-preview-style "bg=#{{@tape_dark}},fg=#{{@tape_fg}}"
 
         # ── Force Refresh Styles ──
         set -g status-style "bg={tmux['bg']},fg=#{{@tape_fg}}"
@@ -959,6 +948,88 @@ def gen_opencode(palette: dict, mode: str) -> str:
     return json.dumps(doc, indent=2) + "\n"
 
 
+def gen_omp(palette: dict, mode: str) -> str:
+    """Generate a complete oh-my-pi custom theme."""
+    p = palette[mode]
+    b, t, a, d, g = p["base"], p["text"], p["accent"], p["diagnostic"], p["git"]
+    primary_accent, secondary_accent = a["orange"], a["purple"]
+    colors = {
+        "accent": primary_accent,
+        "border": b["border"],
+        "borderAccent": primary_accent,
+        "borderMuted": t["fg_dim"],
+        "success": d["hint"],
+        "error": d["error"],
+        "warning": d["warn"],
+        "muted": t["fg_dim"],
+        "dim": t["fg_dim"],
+        "text": t["fg"],
+        "thinkingText": t["fg_dim"],
+
+        "selectedBg": b["bg3"],
+        "userMessageBg": b["bg1"],
+        "customMessageBg": b["bg1"],
+        "toolPendingBg": b["bg1"],
+        "toolSuccessBg": b["bg1"],
+        "toolErrorBg": b["bg1"],
+        "statusLineBg": b["bg1"],
+        "userMessageText": t["fg"],
+        "customMessageText": t["fg"],
+        "customMessageLabel": secondary_accent,
+        "toolTitle": t["fg"],
+        "toolOutput": t["fg"],
+
+        "mdHeading": primary_accent,
+        "mdLink": a["blue"],
+        "mdLinkUrl": t["fg_dim"],
+        "mdCode": a["yellow"],
+        "mdCodeBlock": t["fg"],
+        "mdCodeBlockBorder": b["border"],
+        "mdQuote": t["fg_dim"],
+        "mdQuoteBorder": t["comment"],
+        "mdHr": t["comment"],
+        "mdListBullet": a["cyan"],
+
+        "toolDiffAdded": g["add"],
+        "toolDiffRemoved": g["delete"],
+        "toolDiffContext": t["fg_dim"],
+        "syntaxComment": t["fg_dim"],
+        "syntaxKeyword": primary_accent,
+        "syntaxFunction": a["blue"],
+        "syntaxVariable": t["fg"],
+        "syntaxString": a["green"],
+        "syntaxNumber": a["orange"],
+        "syntaxType": a["yellow"],
+        "syntaxOperator": secondary_accent,
+        "syntaxPunctuation": t["fg_dim"],
+
+        "thinkingOff": t["fg_dim"],
+        "thinkingMinimal": a["cyan"],
+        "thinkingLow": a["cyan"],
+        "thinkingMedium": secondary_accent,
+        "thinkingHigh": primary_accent,
+        "thinkingXhigh": primary_accent,
+        "thinkingMax": primary_accent,
+        "bashMode": a["green"],
+        "pythonMode": a["blue"],
+
+        "statusLineSep": t["fg_dim"],
+        "statusLineModel": secondary_accent,
+        "statusLinePath": t["fg_dim"],
+        "statusLineGitClean": g["add"],
+        "statusLineGitDirty": d["warn"],
+        "statusLineContext": t["fg_dim"],
+        "statusLineSpend": a["yellow"],
+        "statusLineStaged": g["add"],
+        "statusLineDirty": d["warn"],
+        "statusLineUntracked": a["cyan"],
+        "statusLineOutput": t["fg_dim"],
+        "statusLineCost": a["yellow"],
+        "statusLineSubagents": secondary_accent,
+    }
+    return json.dumps({"name": f"cassette-futurism-{mode}", "colors": colors}, indent=2) + "\n"
+
+
 # ─── Install / Switch scripts ─────────────────────────────────────
 
 
@@ -1138,6 +1209,9 @@ def main():
     # Opencode
     write(DIST / "opencode" / "cassette-futurism-dark.json", gen_opencode(palette, "dark"))
     write(DIST / "opencode" / "cassette-futurism-light.json", gen_opencode(palette, "light"))
+    # omp
+    write(DIST / "omp" / "cassette-futurism-dark.json", gen_omp(palette, "dark"))
+    write(DIST / "omp" / "cassette-futurism-light.json", gen_omp(palette, "light"))
 
     # Neovim plugin
     nvim = DIST / "nvim" / "cassette-futurism.nvim"

@@ -1,4 +1,4 @@
-import {afterEach, describe, expect, test} from "bun:test";
+import {afterEach, beforeEach, describe, expect, test} from "bun:test";
 import {mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -14,10 +14,37 @@ import {
   setTransparencyMode,
 } from "../manager";
 import {REPO_ROOT, resolveThemeId, THEMES, THEME_ORDER} from "../theme-registry";
+import {parseDocument} from "yaml";
+const originalOmpEnv = {
+  OMP_PROFILE: process.env.OMP_PROFILE,
+  PI_PROFILE: process.env.PI_PROFILE,
+  PI_CONFIG_DIR: process.env.PI_CONFIG_DIR,
+  PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
+};
 
+function clearOmpEnv(): void {
+  delete process.env.OMP_PROFILE;
+  delete process.env.PI_PROFILE;
+  delete process.env.PI_CONFIG_DIR;
+  delete process.env.PI_CODING_AGENT_DIR;
+}
+
+function restoreOmpEnv(): void {
+  clearOmpEnv();
+  for (const [key, value] of Object.entries(originalOmpEnv)) {
+    if (value !== undefined) {
+      process.env[key] = value;
+    }
+  }
+}
 const created: string[] = [];
 
+beforeEach(() => {
+  clearOmpEnv();
+});
+
 afterEach(() => {
+  restoreOmpEnv();
   while (created.length > 0) {
     const path = created.pop();
     if (path) {
@@ -380,17 +407,6 @@ describe("theme-tape manager", () => {
     expect(readFileSync(join(root, ".tmux/theme-tape.conf"), "utf8")).toContain('status-style "bg=#{@tape_bg},fg=#{@tape_fg}"');
   });
 
-  test("cassette tmux dark output uses a warmer analog palette", () => {
-    const tmuxDark = readFileSync(join(REPO_ROOT, "themes/cassette-futurism/dist/tmux/cassette-futurism-dark.conf"), "utf8");
-
-    expect(tmuxDark).toContain('set -g @tape_purple "#b08968"');
-    expect(tmuxDark).toContain('set -g @tape_green "#7fb081"');
-    expect(tmuxDark).toContain('set -g mode-style "bg=#{@tape_dark},fg=#{@tape_orange},bold"');
-    expect(tmuxDark).toContain('set -g message-style "bg=#{@tape_dark},fg=#{@tape_green},border-style=double"');
-    expect(tmuxDark).toContain("setw -g pane-border-lines double");
-    expect(tmuxDark).not.toContain("window-style");
-  });
-
   test("light mode keeps black and muted text darker than the page", () => {
     const cassetteGhostty = readFileSync(join(REPO_ROOT, "themes/cassette-futurism/dist/ghostty/cassette-futurism-light"), "utf8");
     const cassetteTmux = readFileSync(join(REPO_ROOT, "themes/cassette-futurism/dist/tmux/cassette-futurism-light.conf"), "utf8");
@@ -408,5 +424,121 @@ describe("theme-tape manager", () => {
     expect(zenithGhostty).toContain("palette = 255=#3c3954");
     expect(zenithTmux).toContain('set -g @tape_gray "#2a2840"');
     expect(zenithTmux).toContain('set -g window-active-style "fg=#{@tape_fg},bg=default"');
+  });
+  test("installs omp assets and preserves unrelated YAML while pairing both slots", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-omp-config-"));
+    created.push(root);
+    const agentDir = join(root, "omp-agent");
+    mkdirSync(agentDir, {recursive: true});
+    writeFileSync(
+      join(agentDir, "config.yml"),
+      [
+        "# keep this comment",
+        "models: {default: local, nested: {enabled: true}}",
+        "theme:",
+        "  dark: titanium",
+        "  light: light",
+        "nested:",
+        "  keep: true",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const options = {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      ompAgentDir: agentDir,
+      reloadTmux: false,
+      refreshNeovim: false,
+    };
+    applyTheme("cassette-futurism", "dark", ["omp"], options);
+
+    const configPath = join(agentDir, "config.yml");
+    const config = readFileSync(configPath, "utf8");
+    expect(config).toContain("# keep this comment");
+    const parsed = parseDocument(config).toJS() as {
+      models: {default: string; nested: {enabled: boolean}};
+      nested: {keep: boolean};
+      theme: {dark: string; light: string};
+    };
+    expect(parsed.models).toEqual({default: "local", nested: {enabled: true}});
+    expect(parsed.nested).toEqual({keep: true});
+    expect(parsed.theme).toEqual({dark: "cassette-futurism-dark", light: "cassette-futurism-light"});
+
+    applyTheme("cassette-futurism", "light", ["omp"], options);
+    const switchedConfig = parseDocument(readFileSync(configPath, "utf8")).toJS() as typeof parsed;
+    expect(switchedConfig.theme).toEqual({dark: "cassette-futurism-dark", light: "cassette-futurism-light"});
+
+    applyTheme("zenith", "dark", ["omp"], options);
+    const familyConfig = parseDocument(readFileSync(configPath, "utf8")).toJS() as typeof parsed;
+    expect(familyConfig.theme).toEqual({dark: "zenith-dark", light: "zenith-light"});
+  });
+
+  test("rejects malformed omp YAML before changing config or state", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-omp-invalid-"));
+    created.push(root);
+    const agentDir = join(root, "omp-agent");
+    mkdirSync(agentDir, {recursive: true});
+    const configPath = join(agentDir, "config.yml");
+    const malformed = "theme: [\n";
+    writeFileSync(configPath, malformed, "utf8");
+
+    expect(() => applyTheme("zenith", "dark", ["omp"], {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      ompAgentDir: agentDir,
+      reloadTmux: false,
+      refreshNeovim: false,
+    })).toThrow(/Invalid omp config/);
+    expect(readFileSync(configPath, "utf8")).toBe(malformed);
+    expect(() => readFileSync(join(root, ".tmux/theme_name"), "utf8")).toThrow();
+  });
+
+  test("follows native profile precedence and explicit agent override conventions", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-omp-paths-"));
+    created.push(root);
+    const customAgent = join(root, "custom-agent");
+    process.env.OMP_PROFILE = "work";
+    process.env.PI_PROFILE = "legacy";
+    process.env.PI_CONFIG_DIR = ".omp";
+    process.env.PI_CODING_AGENT_DIR = customAgent;
+
+    installThemeAssets("zenith", ["omp"], {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+
+    const profileAgent = join(root, ".omp/profiles/work/agent");
+    const profileConfig = parseDocument(readFileSync(join(profileAgent, "config.yml"), "utf8")).toJS() as {
+      theme: {dark: string; light: string};
+    };
+    expect(profileConfig.theme).toEqual({dark: "zenith-dark", light: "zenith-light"});
+    expect(() => readFileSync(join(customAgent, "config.yml"), "utf8")).toThrow();
+
+    clearOmpEnv();
+    process.env.PI_CODING_AGENT_DIR = customAgent;
+    installThemeAssets("zenith", ["omp"], {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      reloadTmux: false,
+      refreshNeovim: false,
+    });
+    const customConfig = parseDocument(readFileSync(join(customAgent, "config.yml"), "utf8")).toJS() as {
+      theme: {dark: string; light: string};
+    };
+    expect(customConfig.theme).toEqual({dark: "zenith-dark", light: "zenith-light"});
+    expect(parseDocument(readFileSync(join(profileAgent, "config.yml"), "utf8")).toJS()).toEqual(profileConfig);
+
   });
 });

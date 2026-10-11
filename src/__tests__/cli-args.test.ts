@@ -23,4 +23,7 @@ describe("theme-tape cli args", () => {
       components: "all",
     });
   });
+  test("accepts omp as a configure target", () => {
+    expect(parseArgs(["configure", "omp"], "zenith")).toEqual({kind: "configure", target: "omp"});
+  });
 });

@@ -7,5 +7,6 @@
   "nvimPluginDir": "zenith.nvim",
   "nvimColorscheme": "zenith",
   "yaziFlavorBase": "zenith",
-  "opencodeThemeBase": "zenith"
+  "opencodeThemeBase": "zenith",
+  "ompThemeBase": "zenith"
 }

@@ -130,6 +130,7 @@ theme-tape apply --theme zenith --mode dark
 - writes the selected theme family to both slots (`zenith-dark` + `zenith-light`, or `cassette-futurism-dark` + `cassette-futurism-light`); omp continues choosing the slot from the terminal background and can update while running
 - resolves named profiles as `~/.omp/profiles/<OMP_PROFILE>/agent` (a named profile overrides `PI_CODING_AGENT_DIR`); `OMP_PROFILE` takes precedence over legacy `PI_PROFILE`, while the default uses `PI_CODING_AGENT_DIR` when set, otherwise `~/.omp/agent`
 - `theme-tape config transparent|opaque|auto` does not rewrite omp root or panel backgrounds; omp's main canvas follows the terminal, while generated panel/status surfaces remain palette-controlled
+- generated OMP themes include terminal background, chrome, widget, and ANSI colors for Tern; dark/light keep each theme's accent family aligned for readable figures
 
 ### opencode
 

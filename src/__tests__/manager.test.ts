@@ -425,6 +425,43 @@ describe("theme-tape manager", () => {
     expect(zenithTmux).toContain('set -g @tape_gray "#2a2840"');
     expect(zenithTmux).toContain('set -g window-active-style "fg=#{@tape_fg},bg=default"');
   });
+  test("keeps OMP and Tern surfaces coordinated in both modes", () => {
+    for (const themeId of THEME_ORDER) {
+      const theme = THEMES[themeId];
+      for (const mode of ["dark", "light"] as const) {
+        const ompTheme = JSON.parse(
+          readFileSync(join(theme.distDir, "omp", `${theme.ompThemeBase}-${mode}.json`), "utf8"),
+        ) as {
+          colors: Record<string, string>;
+          terminal: {
+            background: string;
+            foreground: string;
+            chrome: string;
+            widget: string;
+            ansi: string[];
+          };
+        };
+
+        expect(ompTheme.colors.warning).not.toBe(ompTheme.colors.accent);
+        expect(ompTheme.colors.borderMuted).toBe(ompTheme.colors.border);
+        expect(ompTheme.colors.statusLineGitDirty).not.toBe(ompTheme.colors.accent);
+        expect(ompTheme.colors.statusLineDirty).not.toBe(ompTheme.colors.accent);
+        expect(ompTheme.colors.thinkingMinimal).not.toBe(ompTheme.colors.thinkingLow);
+        expect(ompTheme.colors.thinkingHigh).not.toBe(ompTheme.colors.thinkingXhigh);
+        expect(ompTheme.colors.thinkingXhigh).not.toBe(ompTheme.colors.thinkingMax);
+        expect(ompTheme.colors.thinkingHigh).not.toBe(ompTheme.colors.thinkingMax);
+        expect(ompTheme.colors.assistantMessageText).toBe(ompTheme.colors.text);
+        expect(ompTheme.colors.statusLineBg).toBe(ompTheme.terminal.background);
+        expect(ompTheme.colors.userMessageBg).not.toBe(ompTheme.colors.statusLineBg);
+        expect(ompTheme.colors.toolSuccessBg).not.toBe(ompTheme.colors.toolPendingBg);
+        expect(ompTheme.colors.toolErrorBg).not.toBe(ompTheme.colors.toolPendingBg);
+        expect(ompTheme.terminal.foreground).toBe(ompTheme.colors.text);
+        expect(ompTheme.terminal.chrome).not.toBe(ompTheme.terminal.background);
+        expect(ompTheme.terminal.widget).not.toBe(ompTheme.terminal.background);
+        expect(ompTheme.terminal.ansi).toHaveLength(16);
+      }
+    }
+  });
   test("installs omp assets and preserves unrelated YAML while pairing both slots", () => {
     const root = mkdtempSync(join(tmpdir(), "theme-tape-omp-config-"));
     created.push(root);

@@ -63,6 +63,17 @@ def resolve_ansi(palette: dict, ansi_map: dict, mode: str) -> dict[int, str]:
         result[8] = mode_pal["text"]["fg"]
     return result
 
+def mix_hex(base: str, overlay: str, ratio: float) -> str:
+    """Blend overlay into base for readable semantic surfaces."""
+    def rgb(value: str) -> tuple[int, int, int]:
+        value = value.lstrip("#")
+        return tuple(int(value[i:i + 2], 16) for i in (0, 2, 4))
+
+    base_rgb, overlay_rgb = rgb(base), rgb(overlay)
+    mixed = tuple(round(base_rgb[i] + (overlay_rgb[i] - base_rgb[i]) * ratio) for i in range(3))
+    return "#{:02x}{:02x}{:02x}".format(*mixed)
+
+
 
 # ─── Ghostty ───────────────────────────────────────────────────────
 
@@ -952,27 +963,31 @@ def gen_omp(palette: dict, mode: str) -> str:
     """Generate a complete oh-my-pi custom theme."""
     p = palette[mode]
     b, t, a, d, g = p["base"], p["text"], p["accent"], p["diagnostic"], p["git"]
+    ansi = resolve_ansi(palette, palette["ansi_map"], mode)
     primary_accent, secondary_accent = a["orange"], a["purple"]
+    tool_success_bg = mix_hex(b["bg1"], d["hint"], 0.16)
+    tool_error_bg = mix_hex(b["bg1"], d["error"], 0.16)
     colors = {
         "accent": primary_accent,
         "border": b["border"],
         "borderAccent": primary_accent,
-        "borderMuted": t["fg_dim"],
+        "borderMuted": b["border"],
         "success": d["hint"],
         "error": d["error"],
-        "warning": d["warn"],
+        "warning": a["yellow"],
         "muted": t["fg_dim"],
-        "dim": t["fg_dim"],
+        "dim": t["comment"],
         "text": t["fg"],
+        "assistantMessageText": t["fg"],
         "thinkingText": t["fg_dim"],
 
         "selectedBg": b["bg3"],
         "userMessageBg": b["bg1"],
-        "customMessageBg": b["bg1"],
+        "customMessageBg": b["bg2"],
         "toolPendingBg": b["bg1"],
-        "toolSuccessBg": b["bg1"],
-        "toolErrorBg": b["bg1"],
-        "statusLineBg": b["bg1"],
+        "toolSuccessBg": tool_success_bg,
+        "toolErrorBg": tool_error_bg,
+        "statusLineBg": b["bg"],
         "userMessageText": t["fg"],
         "customMessageText": t["fg"],
         "customMessageLabel": secondary_accent,
@@ -1003,31 +1018,43 @@ def gen_omp(palette: dict, mode: str) -> str:
         "syntaxOperator": secondary_accent,
         "syntaxPunctuation": t["fg_dim"],
 
-        "thinkingOff": t["fg_dim"],
-        "thinkingMinimal": a["cyan"],
+        "thinkingOff": t["comment"],
+        "thinkingMinimal": t["fg_dim"],
         "thinkingLow": a["cyan"],
         "thinkingMedium": secondary_accent,
         "thinkingHigh": primary_accent,
-        "thinkingXhigh": primary_accent,
-        "thinkingMax": primary_accent,
+        "thinkingXhigh": a["pink"],
+        "thinkingMax": a["red"],
         "bashMode": a["green"],
         "pythonMode": a["blue"],
 
-        "statusLineSep": t["fg_dim"],
+        "statusLineSep": t["comment"],
         "statusLineModel": secondary_accent,
         "statusLinePath": t["fg_dim"],
         "statusLineGitClean": g["add"],
-        "statusLineGitDirty": d["warn"],
+        "statusLineGitDirty": a["yellow"],
         "statusLineContext": t["fg_dim"],
         "statusLineSpend": a["yellow"],
         "statusLineStaged": g["add"],
-        "statusLineDirty": d["warn"],
+        "statusLineDirty": a["yellow"],
         "statusLineUntracked": a["cyan"],
         "statusLineOutput": t["fg_dim"],
         "statusLineCost": a["yellow"],
         "statusLineSubagents": secondary_accent,
     }
-    return json.dumps({"name": f"cassette-futurism-{mode}", "colors": colors}, indent=2) + "\n"
+    doc = {
+        "$schema": "https://raw.githubusercontent.com/can1357/oh-my-pi/main/packages/tui/src/theme/theme-schema.json",
+        "name": f"cassette-futurism-{mode}",
+        "colors": colors,
+        "terminal": {
+            "background": b["bg"],
+            "foreground": t["fg"],
+            "chrome": b["bg1"],
+            "widget": b["bg2"],
+            "ansi": [ansi[index] for index in range(16)],
+        },
+    }
+    return json.dumps(doc, indent=2) + "\n"
 
 
 # ─── Install / Switch scripts ─────────────────────────────────────

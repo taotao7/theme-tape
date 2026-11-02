@@ -26,7 +26,4 @@ describe("theme-tape cli args", () => {
   test("accepts omp as a configure target", () => {
     expect(parseArgs(["configure", "omp"], "zenith")).toEqual({kind: "configure", target: "omp"});
   });
-  test("accepts tern as a configure target", () => {
-    expect(parseArgs(["configure", "tern"], "zenith")).toEqual({kind: "configure", target: "tern"});
-  });
 });

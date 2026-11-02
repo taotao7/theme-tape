@@ -1064,17 +1064,6 @@ def gen_omp(palette: dict, mode: str) -> str:
     return json.dumps(doc, indent=2) + "\n"
 
 
-def gen_tern(mode: str) -> str:
-    """Generate a Tern CSS theme that keeps the media lightbox on the theme surface."""
-    return textwrap.dedent(f"""\
-        @import "zenith-{mode}";
-
-        .tn-lb {{
-            background: var(--page);
-        }}
-    """)
-
-
 # ─── Install / Switch scripts ─────────────────────────────────────
 
 
@@ -1261,10 +1250,6 @@ def main():
     write(DIST / "omp" / "zenith-dark.json", gen_omp(palette, "dark"))
     write(DIST / "omp" / "zenith-light.json", gen_omp(palette, "light"))
 
-    # Tern (CSS theme layered over the omp theme)
-    write(DIST / "tern" / "zenith-dark-tern.css", gen_tern("dark"))
-    write(DIST / "tern" / "zenith-light-tern.css", gen_tern("light"))
-
     # Neovim plugin
     nvim = DIST / "nvim" / "zenith.nvim"
     write(nvim / "colors" / "zenith.lua", gen_nvim_colors())
@@ -1284,8 +1269,6 @@ def main():
     print(f"  dist/warp/     — 2 theme files (dark + light)")
     print(f"  dist/tmux/     — 2 theme configs (dark + light)")
     print(f"  dist/yazi/     — 2 theme configs (dark + light)")
-    print(f"  dist/omp/      — 2 omp themes")
-    print(f"  dist/tern/     — 2 Tern CSS themes")
     print(f"  dist/nvim/     — zenith.nvim plugin")
     print(f"  install.sh     — install/symlink script")
     print(f"  switch.sh      — dark/light mode switcher")

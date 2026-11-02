@@ -459,53 +459,8 @@ describe("theme-tape manager", () => {
         expect(ompTheme.terminal.chrome).not.toBe(ompTheme.terminal.background);
         expect(ompTheme.terminal.widget).not.toBe(ompTheme.terminal.background);
         expect(ompTheme.terminal.ansi).toHaveLength(16);
-        const ternCss = readFileSync(
-          join(theme.distDir, "tern", `${theme.ompThemeBase}-${mode}-tern.css`),
-          "utf8",
-        );
-        expect(ternCss).toContain(`@import "${theme.ompThemeBase}-${mode}";`);
-        expect(ternCss).toContain(".tn-lb");
-        expect(ternCss).toContain("background: var(--page);");
       }
     }
-  });
-  test("installs Tern CSS themes and pins both appearance slots", () => {
-    const root = mkdtempSync(join(tmpdir(), "theme-tape-tern-"));
-    created.push(root);
-    const ternRoot = join(root, "Tern");
-    mkdirSync(ternRoot, {recursive: true});
-    writeFileSync(
-      join(ternRoot, "settings.json"),
-      `${JSON.stringify({theme: "System", keep: true}, null, 2)}\n`,
-      "utf8",
-    );
-
-    applyTheme("cassette-futurism", "light", ["tern"], {
-      repoRoot: REPO_ROOT,
-      homeDir: root,
-      configHome: join(root, ".config"),
-      dataHome: join(root, ".local", "share"),
-      ternConfigDir: ternRoot,
-      reloadTmux: false,
-      refreshNeovim: false,
-    });
-
-    const darkLink = join(ternRoot, "themes", "cassette-futurism-dark-tern.css");
-    expect(realpathSync(darkLink)).toBe(
-      join(REPO_ROOT, "themes", "cassette-futurism", "dist", "tern", "cassette-futurism-dark-tern.css"),
-    );
-    expect(realpathSync(join(ternRoot, "themes", "cassette-futurism-light-tern.css"))).toBe(
-      join(REPO_ROOT, "themes", "cassette-futurism", "dist", "tern", "cassette-futurism-light-tern.css"),
-    );
-
-    const settings = JSON.parse(readFileSync(join(ternRoot, "settings.json"), "utf8"));
-    expect(settings).toEqual({
-      theme: "System",
-      keep: true,
-      theme_dark: "cassette-futurism-dark-tern",
-      theme_light: "cassette-futurism-light-tern",
-    });
-    expect(readFileSync(darkLink, "utf8")).toContain('@import "cassette-futurism-dark";');
   });
   test("installs omp assets and preserves unrelated YAML while pairing both slots", () => {
     const root = mkdtempSync(join(tmpdir(), "theme-tape-omp-config-"));

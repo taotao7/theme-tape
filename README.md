@@ -88,7 +88,7 @@ theme-tape state          # print persisted theme + mode
 theme-tape doctor         # print detected paths and install status
 theme-tape build          # regenerate theme outputs
 theme-tape config MODE    # auto | transparent | opaque
-theme-tape configure all  # ghostty | tmux | nvim | yazi | opencode | omp | tern | all
+theme-tape configure all  # ghostty | tmux | nvim | yazi | opencode | omp | all
 theme-tape install --theme all --components all
 theme-tape apply --theme zenith --mode dark
 ```
@@ -132,13 +132,6 @@ theme-tape apply --theme zenith --mode dark
 - `theme-tape config transparent|opaque|auto` does not rewrite omp root or panel backgrounds; omp's main canvas follows the terminal, while generated panel/status surfaces remain palette-controlled
 - generated OMP themes include terminal background, chrome, widget, and ANSI colors for Tern; dark/light keep each theme's accent family aligned for readable figures
 
-### Tern
-
-- installs CSS themes into Tern's `themes/` directory (`~/Library/Application Support/Tern` on macOS, or `$TERN_CONFIG_DIR`)
-- each CSS theme imports the matching omp theme and pins `theme_dark` / `theme_light` in Tern's `settings.json`, preserving unrelated settings
-- overrides the media lightbox background (`.tn-lb`) to `var(--page)`, so images and Mermaid diagrams follow the selected light/dark theme
-- skips the integration when Tern is not installed
-
 ### opencode
 
 - installs theme JSONs into `~/.config/opencode/themes`
@@ -178,7 +171,6 @@ Themes are discovered from `themes/*/theme.json`. Each theme directory can ship 
 - Yazi
 - opencode
 - omp
-- Tern
 
 ## Development
 

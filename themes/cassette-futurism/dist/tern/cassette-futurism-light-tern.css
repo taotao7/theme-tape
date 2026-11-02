@@ -1,0 +1,5 @@
+@import "cassette-futurism-light";
+
+.tn-lb {
+    background: var(--page);
+}

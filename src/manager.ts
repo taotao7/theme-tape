@@ -33,6 +33,7 @@ export interface ManagerOptions {
   dataHome?: string;
   runtimeDir?: string;
   ompAgentDir?: string;
+  ternConfigDir?: string;
   dryRun?: boolean;
   reloadTmux?: boolean;
   refreshNeovim?: boolean;
@@ -72,6 +73,8 @@ export interface DoctorThemeInfo {
   opencodeLightAsset: DoctorPath;
   ompDarkAsset: DoctorPath;
   ompLightAsset: DoctorPath;
+  ternDarkAsset: DoctorPath;
+  ternLightAsset: DoctorPath;
   ghosttyDarkLink: DoctorPath;
   ghosttyLightLink: DoctorPath;
   warpDarkLink: DoctorPath;
@@ -85,6 +88,8 @@ export interface DoctorThemeInfo {
   opencodeLightLink: DoctorPath;
   ompDarkLink: DoctorPath;
   ompLightLink: DoctorPath;
+  ternDarkLink: DoctorPath;
+  ternLightLink: DoctorPath;
 }
 
 
@@ -114,12 +119,17 @@ export interface DoctorInfo {
   ompThemesDir: DoctorPath;
   ompDarkTheme: string;
   ompLightTheme: string;
+  ternConfigRoot: DoctorPath;
+  ternThemesDir: DoctorPath;
+  ternSettingsFile: DoctorPath;
+  ternDarkTheme: string;
+  ternLightTheme: string;
   state: ThemeState;
   themes: DoctorThemeInfo[];
 }
 
 export type NvimFlavor = "astronvim" | "neovim";
-export type ConfigureTarget = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "omp" | "all";
+export type ConfigureTarget = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "omp" | "tern" | "all";
 export type TransparencyMode = "auto" | "transparent" | "opaque";
 
 export interface ThemeTapeConfig {
@@ -133,6 +143,7 @@ interface ResolvedOptions {
   dataHome: string;
   runtimeDir: string;
   ompAgentDir: string;
+  ternConfigDir: string;
   dryRun: boolean;
   reloadTmux: boolean;
   refreshNeovim: boolean;
@@ -263,6 +274,12 @@ export function installThemeAssets(
       );
       messages.push(`Omp themes ready for ${theme.id}`);
     }
+
+    if (components.includes("tern")) {
+      if (installTernThemeAssets(theme, resolved)) {
+        messages.push(`Tern themes ready for ${theme.id}`);
+      }
+    }
   }
 
   // Neovim config references all themes, so always install all nvim plugins
@@ -307,6 +324,11 @@ export function installThemeAssets(
   if (components.includes("omp")) {
     const integration = configureOmp(resolved);
     messages.push(`Omp config ready: ${integration.managedConfig.path}`);
+  }
+
+  if (components.includes("tern")) {
+    const integration = configureTern(resolved);
+    messages.push(integration.installed ? `Tern config ready: ${integration.managedConfig.path}` : "Tern not detected; skipped");
   }
 
   for (const message of messages) {
@@ -370,6 +392,11 @@ export function applyTheme(
     messages.push(`Omp switched to ${theme.id} dark/light pair`);
   }
 
+  if (components.includes("tern")) {
+    const integration = configureTern(resolved);
+    messages.push(integration.installed ? `Tern switched to ${theme.id} dark/light pair` : "Tern not detected; skipped");
+  }
+
   if (components.includes("tmux") && resolved.reloadTmux) {
     reloadTmux(theme.id, mode, resolved, messages);
   }
@@ -425,6 +452,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const opencodeIntegration = detectOpencodeIntegration(resolved);
   const ompIntegration = detectOmpIntegration(resolved);
   const ompSelection = readOmpThemeSelection(resolved);
+  const ternIntegration = detectTernIntegration(resolved);
+  const ternSelection = readTernThemeSelection(resolved);
   const ghosttyThemesDir = join(resolved.configHome, "ghostty", "themes");
   const warpThemesDir = warpIntegration.themesDir;
   const tmuxThemesDir = join(resolved.homeDir, ".tmux", "themes");
@@ -432,6 +461,7 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const yaziFlavorsDir = join(resolved.configHome, "yazi", "flavors");
   const opencodeThemesDir = opencodeIntegration.themesDir;
   const ompThemesDir = ompIntegration.themesDir;
+  const ternThemesDir = ternIntegration.themesDir;
 
   return {
     repoRoot: createDoctorPath(resolved.repoRoot),
@@ -459,6 +489,11 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
     ompThemesDir: createDoctorPath(ompIntegration.themesDir),
     ompDarkTheme: ompSelection.dark,
     ompLightTheme: ompSelection.light,
+    ternConfigRoot: createDoctorPath(ternIntegration.configRoot),
+    ternThemesDir: createDoctorPath(ternIntegration.themesDir),
+    ternSettingsFile: createDoctorPath(ternIntegration.settingsPath),
+    ternDarkTheme: ternSelection.dark,
+    ternLightTheme: ternSelection.light,
     state,
     themes: THEME_ORDER.map((themeId) => {
       const theme = THEMES[themeId];
@@ -480,6 +515,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         opencodeLightAsset: createDoctorPath(join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-light.json`)),
         ompDarkAsset: createDoctorPath(join(theme.distDir, "omp", `${theme.ompThemeBase}-dark.json`)),
         ompLightAsset: createDoctorPath(join(theme.distDir, "omp", `${theme.ompThemeBase}-light.json`)),
+        ternDarkAsset: createDoctorPath(join(theme.distDir, "tern", `${theme.ompThemeBase}-dark-tern.css`)),
+        ternLightAsset: createDoctorPath(join(theme.distDir, "tern", `${theme.ompThemeBase}-light-tern.css`)),
         ghosttyDarkLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-dark`)),
         ghosttyLightLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-light`)),
         warpDarkLink: createDoctorPath(join(warpThemesDir, `${theme.id}-dark.yaml`)),
@@ -493,6 +530,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         opencodeLightLink: createDoctorPath(join(opencodeThemesDir, `${theme.opencodeThemeBase}-light.json`)),
         ompDarkLink: createDoctorPath(join(ompThemesDir, `${theme.ompThemeBase}-dark.json`)),
         ompLightLink: createDoctorPath(join(ompThemesDir, `${theme.ompThemeBase}-light.json`)),
+        ternDarkLink: createDoctorPath(join(ternThemesDir, `${theme.ompThemeBase}-dark-tern.css`)),
+        ternLightLink: createDoctorPath(join(ternThemesDir, `${theme.ompThemeBase}-light-tern.css`)),
       };
     }),
   };
@@ -529,6 +568,11 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
     `omp themes dir: ${formatDoctorPath(info.ompThemesDir)}`,
     `omp theme.dark: ${info.ompDarkTheme}`,
     `omp theme.light: ${info.ompLightTheme}`,
+    `tern config root: ${formatDoctorPath(info.ternConfigRoot)}`,
+    `tern themes dir: ${formatDoctorPath(info.ternThemesDir)}`,
+    `tern settings.json: ${formatDoctorPath(info.ternSettingsFile)}`,
+    `tern theme.dark: ${info.ternDarkTheme}`,
+    `tern theme.light: ${info.ternLightTheme}`,
   ];
 
   for (const theme of info.themes) {
@@ -563,6 +607,10 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
       `  omp asset light: ${formatDoctorPath(theme.ompLightAsset)}`,
       `  omp install dark: ${formatDoctorPath(theme.ompDarkLink)}`,
       `  omp install light: ${formatDoctorPath(theme.ompLightLink)}`,
+      `  tern asset dark: ${formatDoctorPath(theme.ternDarkAsset)}`,
+      `  tern asset light: ${formatDoctorPath(theme.ternLightAsset)}`,
+      `  tern install dark: ${formatDoctorPath(theme.ternDarkLink)}`,
+      `  tern install light: ${formatDoctorPath(theme.ternLightLink)}`,
     );
   }
 
@@ -702,6 +750,27 @@ export function configureOmp(options: ManagerOptions = {}): {managedConfig: Doct
   };
 }
 
+export function configureTern(options: ManagerOptions = {}): {managedConfig: DoctorPath; installed: boolean} {
+  const resolved = resolveOptions(options);
+  const state = readState(resolved);
+  const integration = detectTernIntegration(resolved);
+
+  if (!integration.installed) {
+    return {
+      managedConfig: createDoctorPath(integration.settingsPath),
+      installed: false,
+    };
+  }
+
+  installTernThemeAssets(THEMES[state.theme], resolved);
+  writeTernThemeConfig(state.theme, resolved);
+
+  return {
+    managedConfig: createDoctorPath(integration.settingsPath),
+    installed: true,
+  };
+}
+
 export function configureTargets(target: ConfigureTarget = "all", options: ManagerOptions = {}): string[] {
   const resolved = resolveOptions(options);
   const targets = target === "all" ? ALL_COMPONENTS : [target];
@@ -723,6 +792,9 @@ export function configureTargets(target: ConfigureTarget = "all", options: Manag
       messages.push(`Configured opencode: ${configureOpencode(resolved).managedConfig.path}`);
     } else if (component === "omp") {
       messages.push(`Configured omp: ${configureOmp(resolved).managedConfig.path}`);
+    } else if (component === "tern") {
+      const result = configureTern(resolved);
+      messages.push(result.installed ? `Configured tern: ${result.managedConfig.path}` : "Tern not detected; skipped");
     }
   }
 
@@ -762,13 +834,16 @@ function resolveOptions(options: ManagerOptions = {}): ResolvedOptions {
     throw new Error("HOME is not set");
   }
 
+  const configHome = options.configHome ?? process.env.XDG_CONFIG_HOME ?? join(homeDir, ".config");
+
   return {
     repoRoot: options.repoRoot ?? REPO_ROOT,
     homeDir,
-    configHome: options.configHome ?? process.env.XDG_CONFIG_HOME ?? join(homeDir, ".config"),
+    configHome,
     dataHome: options.dataHome ?? process.env.XDG_DATA_HOME ?? join(homeDir, ".local", "share"),
     runtimeDir: options.runtimeDir ?? process.env.XDG_RUNTIME_DIR ?? "/tmp",
     ompAgentDir: resolveOmpAgentDir(options, homeDir),
+    ternConfigDir: resolveTernConfigDir(options, homeDir, configHome),
     dryRun: options.dryRun ?? false,
     reloadTmux: options.reloadTmux ?? true,
     refreshNeovim: options.refreshNeovim ?? true,
@@ -796,6 +871,27 @@ function resolveOmpAgentDir(options: ManagerOptions, homeDir: string): string {
   }
 
   return join(homeDir, process.env.PI_CONFIG_DIR || ".omp", "agent");
+}
+
+
+function resolveTernConfigDir(options: ManagerOptions, homeDir: string, configHome: string): string {
+  if (options.ternConfigDir) {
+    return resolve(options.ternConfigDir);
+  }
+
+  if (process.env.TERN_CONFIG_DIR) {
+    return resolve(process.env.TERN_CONFIG_DIR);
+  }
+
+  if (process.platform === "darwin") {
+    return join(homeDir, "Library", "Application Support", "Tern");
+  }
+
+  if (process.platform === "win32") {
+    return join(process.env.APPDATA ?? join(homeDir, "AppData", "Roaming"), "Tern");
+  }
+
+  return join(configHome, "tern");
 }
 
 function writeManagedFile(filePath: string, content: string, options: ResolvedOptions): void {
@@ -997,6 +1093,87 @@ function detectOmpIntegration(options: ResolvedOptions): {
     configPath: existsSync(configPath) || !existsSync(legacyConfigPath) ? configPath : legacyConfigPath,
     themesDir: join(options.ompAgentDir, "themes"),
   };
+}
+
+function detectTernIntegration(options: ResolvedOptions): {
+  configRoot: string;
+  themesDir: string;
+  settingsPath: string;
+  installed: boolean;
+} {
+  const configRoot = options.ternConfigDir;
+  return {
+    configRoot,
+    themesDir: join(configRoot, "themes"),
+    settingsPath: join(configRoot, "settings.json"),
+    installed: existsSync(configRoot),
+  };
+}
+
+function ternThemeName(theme: ThemeSpec, mode: Mode): string {
+  return `${theme.ompThemeBase}-${mode}-tern`;
+}
+
+function installTernThemeAssets(theme: ThemeSpec, options: ResolvedOptions): boolean {
+  const integration = detectTernIntegration(options);
+  if (!integration.installed) {
+    return false;
+  }
+
+  for (const mode of ["dark", "light"] as const) {
+    linkPath(
+      join(theme.distDir, "tern", `${theme.ompThemeBase}-${mode}-tern.css`),
+      join(integration.themesDir, `${theme.ompThemeBase}-${mode}-tern.css`),
+      options,
+    );
+  }
+  return true;
+}
+
+function readTernSettings(settingsPath: string): Record<string, unknown> {
+  if (!existsSync(settingsPath)) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(settingsPath, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("top-level value must be an object");
+    }
+    return parsed as Record<string, unknown>;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid Tern settings ${settingsPath}: ${message}`);
+  }
+}
+
+function readTernThemeSelection(options: ResolvedOptions): {dark: string; light: string} {
+  const integration = detectTernIntegration(options);
+  if (!integration.installed) {
+    return {dark: "Tern not installed", light: "Tern not installed"};
+  }
+
+  const settings = readTernSettings(integration.settingsPath);
+  const dark = settings.theme_dark;
+  const light = settings.theme_light;
+  const nativeDefault = "unset (Tern default)";
+  return {
+    dark: typeof dark === "string" && dark.length > 0 ? dark : nativeDefault,
+    light: typeof light === "string" && light.length > 0 ? light : nativeDefault,
+  };
+}
+
+function writeTernThemeConfig(themeId: ThemeId, options: ResolvedOptions): boolean {
+  const integration = detectTernIntegration(options);
+  if (!integration.installed) {
+    return false;
+  }
+
+  const settings = readTernSettings(integration.settingsPath);
+  settings.theme_dark = ternThemeName(THEMES[themeId], "dark");
+  settings.theme_light = ternThemeName(THEMES[themeId], "light");
+  writeManagedFile(integration.settingsPath, `${JSON.stringify(settings, null, 2)}\n`, options);
+  return true;
 }
 
 type OmpConfigDocument = Document.Parsed;

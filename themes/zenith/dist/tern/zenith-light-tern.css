@@ -1,0 +1,5 @@
+@import "zenith-light";
+
+.tn-lb {
+    background: var(--page);
+}

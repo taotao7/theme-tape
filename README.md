@@ -1,6 +1,6 @@
 # theme-tape
 
-`theme-tape` is a Bun + Ink TUI and CLI for managing the `cassette-futurism` and `zenith` themes across Ghostty, tmux, Neovim/AstroNvim, Yazi, opencode, and omp from one place.
+`theme-tape` is a Bun + Ink TUI and CLI for managing the `cassette-futurism` and `zenith` themes across Ghostty, tmux, Neovim/AstroNvim, Yazi, opencode, omp, and Pi from one place.
 
 ## Preview
 
@@ -18,7 +18,7 @@ Source image URLs:
 - One manager for both themes
 - Interactive TUI plus scriptable CLI
 - Dark, light, and toggle mode switching
-- Managed config generation for Ghostty, tmux, Neovim/AstroNvim, Yazi, opencode, and omp
+- Managed config generation for Ghostty, tmux, Neovim/AstroNvim, Yazi, opencode, omp, and Pi
 - Transparency control with `auto`, `transparent`, and `opaque` modes
 - Omp installs both dark/light theme slots while preserving unrelated `config.yml` values and comments
 - `doctor` output for real asset paths, install paths, and detected config locations
@@ -88,7 +88,7 @@ theme-tape state          # print persisted theme + mode
 theme-tape doctor         # print detected paths and install status
 theme-tape build          # regenerate theme outputs
 theme-tape config MODE    # auto | transparent | opaque
-theme-tape configure all  # ghostty | tmux | nvim | yazi | opencode | omp | all
+theme-tape configure all  # ghostty | tmux | nvim | yazi | opencode | omp | pi | all
 theme-tape install --theme all --components all
 theme-tape apply --theme zenith --mode dark
 ```
@@ -132,6 +132,12 @@ theme-tape apply --theme zenith --mode dark
 - `theme-tape config transparent|opaque|auto` does not rewrite omp root or panel backgrounds; omp's main canvas follows the terminal, while generated panel/status surfaces remain palette-controlled
 - generated OMP themes include terminal background, chrome, widget, and ANSI colors for Tern; dark/light keep each theme's accent family aligned for readable figures
 
+### Pi
+
+- installs both dark/light theme JSONs into `~/.pi/agent/themes` (or `$PI_CODING_AGENT_DIR/themes`); run `theme-tape install --theme all --components pi`
+- preserves the rest of `settings.json` and points Pi's `theme` setting at the active `cassette-futurism-*` or `zenith-*` theme
+- `theme-tape apply --theme cassette-futurism --mode light` switches Pi to `cassette-futurism-light`; Pi can also be reloaded with `/reload`
+
 ### opencode
 
 - installs theme JSONs into `~/.config/opencode/themes`
@@ -171,6 +177,7 @@ Themes are discovered from `themes/*/theme.json`. Each theme directory can ship 
 - Yazi
 - opencode
 - omp
+- Pi
 
 ## Development
 

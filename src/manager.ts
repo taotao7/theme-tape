@@ -33,6 +33,7 @@ export interface ManagerOptions {
   dataHome?: string;
   runtimeDir?: string;
   ompAgentDir?: string;
+  piAgentDir?: string;
   dryRun?: boolean;
   reloadTmux?: boolean;
   refreshNeovim?: boolean;
@@ -72,6 +73,8 @@ export interface DoctorThemeInfo {
   opencodeLightAsset: DoctorPath;
   ompDarkAsset: DoctorPath;
   ompLightAsset: DoctorPath;
+  piDarkAsset: DoctorPath;
+  piLightAsset: DoctorPath;
   ghosttyDarkLink: DoctorPath;
   ghosttyLightLink: DoctorPath;
   warpDarkLink: DoctorPath;
@@ -85,6 +88,8 @@ export interface DoctorThemeInfo {
   opencodeLightLink: DoctorPath;
   ompDarkLink: DoctorPath;
   ompLightLink: DoctorPath;
+  piDarkLink: DoctorPath;
+  piLightLink: DoctorPath;
 }
 
 
@@ -114,12 +119,16 @@ export interface DoctorInfo {
   ompThemesDir: DoctorPath;
   ompDarkTheme: string;
   ompLightTheme: string;
+  piAgentDir: DoctorPath;
+  piSettingsFile: DoctorPath;
+  piThemesDir: DoctorPath;
+  piTheme: string;
   state: ThemeState;
   themes: DoctorThemeInfo[];
 }
 
 export type NvimFlavor = "astronvim" | "neovim";
-export type ConfigureTarget = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "omp" | "all";
+export type ConfigureTarget = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "omp" | "pi" | "all";
 export type TransparencyMode = "auto" | "transparent" | "opaque";
 
 export interface ThemeTapeConfig {
@@ -133,6 +142,7 @@ interface ResolvedOptions {
   dataHome: string;
   runtimeDir: string;
   ompAgentDir: string;
+  piAgentDir: string;
   dryRun: boolean;
   reloadTmux: boolean;
   refreshNeovim: boolean;
@@ -263,6 +273,21 @@ export function installThemeAssets(
       );
       messages.push(`Omp themes ready for ${theme.id}`);
     }
+
+    if (components.includes("pi")) {
+      const piDir = detectPiIntegration(resolved).themesDir;
+      linkPath(
+        join(theme.distDir, "pi", `${theme.piThemeBase}-dark.json`),
+        join(piDir, `${theme.piThemeBase}-dark.json`),
+        resolved,
+      );
+      linkPath(
+        join(theme.distDir, "pi", `${theme.piThemeBase}-light.json`),
+        join(piDir, `${theme.piThemeBase}-light.json`),
+        resolved,
+      );
+      messages.push(`Pi themes ready for ${theme.id}`);
+    }
   }
 
   // Neovim config references all themes, so always install all nvim plugins
@@ -307,6 +332,11 @@ export function installThemeAssets(
   if (components.includes("omp")) {
     const integration = configureOmp(resolved);
     messages.push(`Omp config ready: ${integration.managedConfig.path}`);
+  }
+
+  if (components.includes("pi")) {
+    const integration = configurePi(resolved);
+    messages.push(`Pi config ready: ${integration.managedConfig.path}`);
   }
 
   for (const message of messages) {
@@ -370,6 +400,11 @@ export function applyTheme(
     messages.push(`Omp switched to ${theme.id} dark/light pair`);
   }
 
+  if (components.includes("pi")) {
+    writePiThemeConfig(theme.id, mode, resolved);
+    messages.push(`Pi switched to ${theme.id}-${mode}`);
+  }
+
   if (components.includes("tmux") && resolved.reloadTmux) {
     reloadTmux(theme.id, mode, resolved, messages);
   }
@@ -425,6 +460,7 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const opencodeIntegration = detectOpencodeIntegration(resolved);
   const ompIntegration = detectOmpIntegration(resolved);
   const ompSelection = readOmpThemeSelection(resolved);
+  const piIntegration = detectPiIntegration(resolved);
   const ghosttyThemesDir = join(resolved.configHome, "ghostty", "themes");
   const warpThemesDir = warpIntegration.themesDir;
   const tmuxThemesDir = join(resolved.homeDir, ".tmux", "themes");
@@ -432,6 +468,7 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
   const yaziFlavorsDir = join(resolved.configHome, "yazi", "flavors");
   const opencodeThemesDir = opencodeIntegration.themesDir;
   const ompThemesDir = ompIntegration.themesDir;
+  const piThemesDir = piIntegration.themesDir;
 
   return {
     repoRoot: createDoctorPath(resolved.repoRoot),
@@ -459,6 +496,10 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
     ompThemesDir: createDoctorPath(ompIntegration.themesDir),
     ompDarkTheme: ompSelection.dark,
     ompLightTheme: ompSelection.light,
+    piAgentDir: createDoctorPath(piIntegration.agentDir),
+    piSettingsFile: createDoctorPath(piIntegration.settingsPath),
+    piThemesDir: createDoctorPath(piIntegration.themesDir),
+    piTheme: readPiThemeSelection(resolved),
     state,
     themes: THEME_ORDER.map((themeId) => {
       const theme = THEMES[themeId];
@@ -480,6 +521,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         opencodeLightAsset: createDoctorPath(join(theme.distDir, "opencode", `${theme.opencodeThemeBase}-light.json`)),
         ompDarkAsset: createDoctorPath(join(theme.distDir, "omp", `${theme.ompThemeBase}-dark.json`)),
         ompLightAsset: createDoctorPath(join(theme.distDir, "omp", `${theme.ompThemeBase}-light.json`)),
+        piDarkAsset: createDoctorPath(join(theme.distDir, "pi", `${theme.piThemeBase}-dark.json`)),
+        piLightAsset: createDoctorPath(join(theme.distDir, "pi", `${theme.piThemeBase}-light.json`)),
         ghosttyDarkLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-dark`)),
         ghosttyLightLink: createDoctorPath(join(ghosttyThemesDir, `${theme.ghosttyThemeBase}-light`)),
         warpDarkLink: createDoctorPath(join(warpThemesDir, `${theme.id}-dark.yaml`)),
@@ -493,6 +536,8 @@ export function getDoctorInfo(options: ManagerOptions = {}): DoctorInfo {
         opencodeLightLink: createDoctorPath(join(opencodeThemesDir, `${theme.opencodeThemeBase}-light.json`)),
         ompDarkLink: createDoctorPath(join(ompThemesDir, `${theme.ompThemeBase}-dark.json`)),
         ompLightLink: createDoctorPath(join(ompThemesDir, `${theme.ompThemeBase}-light.json`)),
+        piDarkLink: createDoctorPath(join(piThemesDir, `${theme.piThemeBase}-dark.json`)),
+        piLightLink: createDoctorPath(join(piThemesDir, `${theme.piThemeBase}-light.json`)),
       };
     }),
   };
@@ -529,6 +574,10 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
     `omp themes dir: ${formatDoctorPath(info.ompThemesDir)}`,
     `omp theme.dark: ${info.ompDarkTheme}`,
     `omp theme.light: ${info.ompLightTheme}`,
+    `pi agent dir: ${formatDoctorPath(info.piAgentDir)}`,
+    `pi settings.json: ${formatDoctorPath(info.piSettingsFile)}`,
+    `pi themes dir: ${formatDoctorPath(info.piThemesDir)}`,
+    `pi theme: ${info.piTheme}`,
   ];
 
   for (const theme of info.themes) {
@@ -563,6 +612,10 @@ export function renderDoctorReport(options: ManagerOptions = {}): string {
       `  omp asset light: ${formatDoctorPath(theme.ompLightAsset)}`,
       `  omp install dark: ${formatDoctorPath(theme.ompDarkLink)}`,
       `  omp install light: ${formatDoctorPath(theme.ompLightLink)}`,
+      `  pi asset dark: ${formatDoctorPath(theme.piDarkAsset)}`,
+      `  pi asset light: ${formatDoctorPath(theme.piLightAsset)}`,
+      `  pi install dark: ${formatDoctorPath(theme.piDarkLink)}`,
+      `  pi install light: ${formatDoctorPath(theme.piLightLink)}`,
     );
   }
 
@@ -723,6 +776,8 @@ export function configureTargets(target: ConfigureTarget = "all", options: Manag
       messages.push(`Configured opencode: ${configureOpencode(resolved).managedConfig.path}`);
     } else if (component === "omp") {
       messages.push(`Configured omp: ${configureOmp(resolved).managedConfig.path}`);
+    } else if (component === "pi") {
+      messages.push(`Configured pi: ${configurePi(resolved).managedConfig.path}`);
     }
   }
 
@@ -769,11 +824,24 @@ function resolveOptions(options: ManagerOptions = {}): ResolvedOptions {
     dataHome: options.dataHome ?? process.env.XDG_DATA_HOME ?? join(homeDir, ".local", "share"),
     runtimeDir: options.runtimeDir ?? process.env.XDG_RUNTIME_DIR ?? "/tmp",
     ompAgentDir: resolveOmpAgentDir(options, homeDir),
+    piAgentDir: resolvePiAgentDir(options, homeDir),
     dryRun: options.dryRun ?? false,
     reloadTmux: options.reloadTmux ?? true,
     refreshNeovim: options.refreshNeovim ?? true,
     logger: options.logger ?? (() => {}),
   };
+}
+
+function resolvePiAgentDir(options: ManagerOptions, homeDir: string): string {
+  if (options.piAgentDir) {
+    return resolve(options.piAgentDir);
+  }
+
+  if (process.env.PI_CODING_AGENT_DIR) {
+    return resolve(process.env.PI_CODING_AGENT_DIR);
+  }
+
+  return join(homeDir, ".pi", "agent");
 }
 
 function resolveOmpAgentDir(options: ManagerOptions, homeDir: string): string {
@@ -985,6 +1053,18 @@ function detectOpencodeIntegration(options: ResolvedOptions): {
   };
 }
 
+function detectPiIntegration(options: ResolvedOptions): {
+  agentDir: string;
+  settingsPath: string;
+  themesDir: string;
+} {
+  return {
+    agentDir: options.piAgentDir,
+    settingsPath: join(options.piAgentDir, "settings.json"),
+    themesDir: join(options.piAgentDir, "themes"),
+  };
+}
+
 function detectOmpIntegration(options: ResolvedOptions): {
   agentDir: string;
   configPath: string;
@@ -997,6 +1077,61 @@ function detectOmpIntegration(options: ResolvedOptions): {
     configPath: existsSync(configPath) || !existsSync(legacyConfigPath) ? configPath : legacyConfigPath,
     themesDir: join(options.ompAgentDir, "themes"),
   };
+}
+
+function readPiThemeSelection(options: ResolvedOptions): string {
+  const integration = detectPiIntegration(options);
+  if (!existsSync(integration.settingsPath)) {
+    return "unset (Pi default)";
+  }
+
+  try {
+    const settings = JSON.parse(readFileSync(integration.settingsPath, "utf8")) as {theme?: unknown};
+    return typeof settings.theme === "string" && settings.theme.length > 0 ? settings.theme : "system";
+  } catch {
+    return "invalid settings.json";
+  }
+}
+
+function writePiThemeConfig(themeId: ThemeId, mode: Mode, options: ResolvedOptions): void {
+  const integration = detectPiIntegration(options);
+  let current: Record<string, unknown> = {};
+  if (existsSync(integration.settingsPath)) {
+    try {
+      const parsed = JSON.parse(readFileSync(integration.settingsPath, "utf8"));
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error(`Invalid Pi settings ${integration.settingsPath}: expected JSON object`);
+      }
+      current = parsed as Record<string, unknown>;
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("Invalid Pi settings")) {
+        throw error;
+      }
+
+      throw new Error(`Invalid Pi settings ${integration.settingsPath}: expected JSON object`);
+    }
+  }
+  current.theme = `${THEMES[themeId].piThemeBase}-${mode}`;
+  writeManagedFile(integration.settingsPath, `${JSON.stringify(current, null, 2)}\n`, options);
+}
+
+function configurePi(options: ResolvedOptions): {managedConfig: DoctorPath} {
+  const state = readState(options);
+  const integration = detectPiIntegration(options);
+  for (const theme of Object.values(THEMES)) {
+    linkPath(
+      join(theme.distDir, "pi", `${theme.piThemeBase}-dark.json`),
+      join(integration.themesDir, `${theme.piThemeBase}-dark.json`),
+      options,
+    );
+    linkPath(
+      join(theme.distDir, "pi", `${theme.piThemeBase}-light.json`),
+      join(integration.themesDir, `${theme.piThemeBase}-light.json`),
+      options,
+    );
+  }
+  writePiThemeConfig(state.theme, state.mode, options);
+  return {managedConfig: createDoctorPath(integration.settingsPath)};
 }
 
 type OmpConfigDocument = Document.Parsed;

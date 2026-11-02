@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cassette Futurism Theme — Install script
-# Usage: ./install.sh [--all|--ghostty|--tmux|--nvim|--yazi]
+# Usage: ./install.sh [--all|--ghostty|--tmux|--nvim|--yazi|--pi]
 #   No args = --all
 set -euo pipefail
 
@@ -49,6 +49,15 @@ install_nvim() {
   echo '  Add to init.lua: vim.cmd("colorscheme cassette-futurism")'
 }
 
+install_pi() {
+  echo "Installing Pi themes..."
+  PI_AGENT_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+  mkdir -p "$PI_AGENT_DIR/themes"
+  ln -sf "$DIST/pi/cassette-futurism-dark.json" "$PI_AGENT_DIR/themes/cassette-futurism-dark.json"
+  ln -sf "$DIST/pi/cassette-futurism-light.json" "$PI_AGENT_DIR/themes/cassette-futurism-light.json"
+  echo "  ✓ Themes → $PI_AGENT_DIR/themes"
+}
+
 install_yazi() {
   echo "Installing Yazi theme..."
   YAZI_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/yazi"
@@ -69,16 +78,17 @@ for arg in "$@"; do
     --tmux)    COMPONENTS+=("tmux") ;;
     --nvim)    COMPONENTS+=("nvim") ;;
     --yazi)    COMPONENTS+=("yazi") ;;
-    --all)     COMPONENTS=("ghostty" "tmux" "nvim" "yazi") ;;
+    --pi)      COMPONENTS+=("pi") ;;
+    --all)     COMPONENTS=("ghostty" "tmux" "nvim" "yazi" "pi") ;;
     -h|--help)
-      echo "Usage: $0 [--all|--ghostty|--tmux|--nvim|--yazi]"
+      echo "Usage: $0 [--all|--ghostty|--tmux|--nvim|--yazi|--pi]"
       echo "  No args = install all components"
       exit 0 ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
   esac
 done
 
-[ ${#COMPONENTS[@]} -eq 0 ] && COMPONENTS=("ghostty" "tmux" "nvim" "yazi")
+[ ${#COMPONENTS[@]} -eq 0 ] && COMPONENTS=("ghostty" "tmux" "nvim" "yazi" "pi")
 
 echo "╭─ Cassette Futurism Theme Installer ─╮"
 echo ""

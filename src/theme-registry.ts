@@ -4,7 +4,7 @@ import {fileURLToPath} from "node:url";
 
 export type ThemeId = string;
 export type Mode = "dark" | "light";
-export type ComponentId = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "omp";
+export type ComponentId = "ghostty" | "warp" | "tmux" | "nvim" | "yazi" | "opencode" | "omp" | "pi";
 
 interface ThemeManifest {
   id: string;
@@ -18,6 +18,7 @@ interface ThemeManifest {
   yaziFlavorBase: string;
   opencodeThemeBase: string;
   ompThemeBase: string;
+  piThemeBase: string;
 }
 
 export interface ThemeSpec {
@@ -34,13 +35,14 @@ export interface ThemeSpec {
   yaziFlavorBase: string;
   opencodeThemeBase: string;
   ompThemeBase: string;
+  piThemeBase: string;
 }
 
 const sourceDir = dirname(fileURLToPath(import.meta.url));
 
 export const REPO_ROOT = resolveRepoRoot();
-const KNOWN_COMPONENTS: ComponentId[] = ["ghostty", "warp", "tmux", "nvim", "yazi", "opencode", "omp"];
-export const ALL_COMPONENTS: ComponentId[] = ["ghostty", "tmux", "nvim", "yazi", "opencode", "omp"];
+const KNOWN_COMPONENTS: ComponentId[] = ["ghostty", "warp", "tmux", "nvim", "yazi", "opencode", "omp", "pi"];
+export const ALL_COMPONENTS: ComponentId[] = ["ghostty", "tmux", "nvim", "yazi", "opencode", "omp", "pi"];
 export const THEMES = loadThemes(REPO_ROOT);
 export const THEME_ORDER = Object.values(THEMES)
   .sort((left, right) => left.order - right.order || left.label.localeCompare(right.label))

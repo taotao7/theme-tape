@@ -16,7 +16,7 @@ export function App() {
   const [actionIndex, setActionIndex] = useState(0);
   const [focus, setFocus] = useState<Focus>("action");
   const [busy, setBusy] = useState(false);
-  const [lines, setLines] = useState<string[]>(["Ready. Enter applies to Ghostty, Tmux, Neovim, Yazi, Opencode, and omp."]);
+  const [lines, setLines] = useState<string[]>(["Ready. Enter applies to Ghostty, Tmux, Neovim, Yazi, Opencode, omp, and Pi."]);
 
   function syncState(nextState: {theme: ThemeId; mode: Mode}, statusLine?: string) {
     setCurrent((previous) => {
@@ -133,7 +133,7 @@ export function App() {
   return (
     <Box flexDirection="column" padding={1}>
       <Text bold>theme-tape</Text>
-      <Text color="gray">Merged theme manager for Ghostty, Tmux, Neovim, Yazi, Opencode, and omp.</Text>
+      <Text color="gray">Merged theme manager for Ghostty, Tmux, Neovim, Yazi, Opencode, omp, and Pi.</Text>
       <Box marginTop={1} flexDirection="column">
         <Selector
           focused={focus === "theme"}

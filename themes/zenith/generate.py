@@ -966,6 +966,99 @@ def gen_opencode(palette: dict, mode: str) -> str:
     return json.dumps(doc, indent=2) + "\n"
 
 
+def gen_pi(palette: dict, mode: str) -> str:
+    """Generate a Pi interactive theme using the shared palette."""
+    p = palette[mode]
+    b, t, a, d, g = p["base"], p["text"], p["accent"], p["diagnostic"], p["git"]
+    surface = b["bg"]
+    panel = b["bg1"]
+    float_bg = b["bg2"]
+    selected = b["bg3"]
+    vars = {
+        "text": t["fg"],
+        "muted": t["fg_dim"],
+        "dim": t["comment"],
+        "accent": a["purple"],
+        "secondary": a["blue"],
+        "red": d["error"],
+        "yellow": d["warn"],
+        "green": d["hint"],
+        "blue": a["blue"],
+        "cyan": a["cyan"],
+        "surface": surface,
+        "panel": panel,
+        "float": float_bg,
+        "selected": selected,
+    }
+    colors = {
+        "accent": "accent",
+        "border": b["border"],
+        "borderAccent": "accent",
+        "borderMuted": b["border"],
+        "success": "green",
+        "error": "red",
+        "warning": "yellow",
+        "muted": "muted",
+        "dim": "dim",
+        "text": "text",
+        "thinkingText": "muted",
+        "selectedBg": "selected",
+        "userMessageBg": "panel",
+        "userMessageText": "text",
+        "customMessageBg": "float",
+        "customMessageText": "text",
+        "customMessageLabel": "secondary",
+        "toolPendingBg": "panel",
+        "toolSuccessBg": mix_hex(panel, d["hint"], 0.16),
+        "toolErrorBg": mix_hex(panel, d["error"], 0.16),
+        "toolTitle": "text",
+        "toolOutput": "text",
+        "mdHeading": "accent",
+        "mdLink": "blue",
+        "mdLinkUrl": "muted",
+        "mdCode": a["orange"],
+        "mdCodeBlock": "text",
+        "mdCodeBlockBorder": b["border"],
+        "mdQuote": "muted",
+        "mdQuoteBorder": "dim",
+        "mdHr": "dim",
+        "mdListBullet": "cyan",
+        "toolDiffAdded": g["add"],
+        "toolDiffRemoved": g["delete"],
+        "toolDiffContext": "muted",
+        "syntaxComment": "muted",
+        "syntaxKeyword": "accent",
+        "syntaxFunction": "blue",
+        "syntaxVariable": "text",
+        "syntaxString": "green",
+        "syntaxNumber": a["orange"],
+        "syntaxType": a["yellow"],
+        "syntaxOperator": a["pink"],
+        "syntaxPunctuation": "muted",
+        "thinkingOff": "dim",
+        "thinkingMinimal": "muted",
+        "thinkingLow": "cyan",
+        "thinkingMedium": "secondary",
+        "thinkingHigh": "accent",
+        "thinkingXhigh": a["pink"],
+        "thinkingMax": "red",
+        "bashMode": "green",
+    }
+    doc = {
+        "$schema": "https://pi.dev/schemas/theme.schema.json",
+        "name": f"zenith-{mode}",
+        "appearance": mode,
+        "vars": vars,
+        "colors": colors,
+        "export": {
+            "pageBg": surface,
+            "cardBg": panel,
+            "infoBg": selected,
+        },
+    }
+    return json.dumps(doc, indent=2) + "\n"
+
+
 def gen_omp(palette: dict, mode: str) -> str:
     """Generate a complete oh-my-pi custom theme."""
     p = palette[mode]
@@ -1071,7 +1164,7 @@ def gen_install_sh() -> str:
     return textwrap.dedent("""\
         #!/usr/bin/env bash
         # Zenith Theme — Install script
-        # Usage: ./install.sh [--all|--ghostty|--tmux|--nvim]
+        # Usage: ./install.sh [--all|--ghostty|--tmux|--nvim|--pi]
         #   No args = --all
         set -euo pipefail
 
@@ -1121,6 +1214,15 @@ def gen_install_sh() -> str:
           echo '  Add to init.lua: vim.cmd("colorscheme zenith")'
         }
 
+        install_pi() {
+          echo "Installing Pi themes..."
+          PI_AGENT_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
+          mkdir -p "$PI_AGENT_DIR/themes"
+          ln -sf "$DIST/pi/zenith-dark.json" "$PI_AGENT_DIR/themes/zenith-dark.json"
+          ln -sf "$DIST/pi/zenith-light.json" "$PI_AGENT_DIR/themes/zenith-light.json"
+          echo "  ✓ Themes → $PI_AGENT_DIR/themes"
+        }
+
         install_yazi() {
           echo "Installing Yazi theme..."
           YAZI_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/yazi"
@@ -1141,9 +1243,10 @@ def gen_install_sh() -> str:
             --tmux)    COMPONENTS+=("tmux") ;;
             --nvim)    COMPONENTS+=("nvim") ;;
             --yazi)    COMPONENTS+=("yazi") ;;
-            --all)     COMPONENTS=("ghostty" "tmux" "nvim" "yazi") ;;
+            --pi)      COMPONENTS+=("pi") ;;
+            --all)     COMPONENTS=("ghostty" "tmux" "nvim" "yazi" "pi") ;;
             -h|--help)
-              echo "Usage: $0 [--all|--ghostty|--tmux|--nvim|--yazi]"
+              echo "Usage: $0 [--all|--ghostty|--tmux|--nvim|--yazi|--pi]"
               echo "  No args = install all components"
               exit 0 ;;
             *) echo "Unknown option: $arg"; exit 1 ;;
@@ -1151,7 +1254,7 @@ def gen_install_sh() -> str:
         done
 
         # Default: all
-        [ ${#COMPONENTS[@]} -eq 0 ] && COMPONENTS=("ghostty" "tmux" "nvim" "yazi")
+        [ ${#COMPONENTS[@]} -eq 0 ] && COMPONENTS=("ghostty" "tmux" "nvim" "yazi" "pi")
 
         echo "╭─ Zenith Theme Installer ─╮"
         echo ""
@@ -1249,6 +1352,10 @@ def main():
     # omp
     write(DIST / "omp" / "zenith-dark.json", gen_omp(palette, "dark"))
     write(DIST / "omp" / "zenith-light.json", gen_omp(palette, "light"))
+
+    # Pi
+    write(DIST / "pi" / "zenith-dark.json", gen_pi(palette, "dark"))
+    write(DIST / "pi" / "zenith-light.json", gen_pi(palette, "light"))
 
     # Neovim plugin
     nvim = DIST / "nvim" / "zenith.nvim"

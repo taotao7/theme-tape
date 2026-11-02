@@ -260,6 +260,45 @@ describe("theme-tape manager", () => {
     expect(readFileSync(join(root, ".config/yazi/theme.toml"), "utf8")).toBe(renderYaziThemeToml("cassette-futurism"));
   });
 
+  test("installs Pi themes and updates settings while preserving other values", () => {
+    const root = mkdtempSync(join(tmpdir(), "theme-tape-pi-"));
+    created.push(root);
+    const piAgentDir = join(root, ".pi/agent");
+    mkdirSync(piAgentDir, {recursive: true});
+    writeFileSync(
+      join(piAgentDir, "settings.json"),
+      JSON.stringify({defaultModel: "local/model", packages: ["npm:example"]}, null, 2),
+      "utf8",
+    );
+
+    const options = {
+      repoRoot: REPO_ROOT,
+      homeDir: root,
+      configHome: join(root, ".config"),
+      dataHome: join(root, ".local", "share"),
+      piAgentDir,
+      reloadTmux: false,
+      refreshNeovim: false,
+    };
+    applyTheme("cassette-futurism", "light", ["pi"], options);
+
+    const settings = JSON.parse(readFileSync(join(piAgentDir, "settings.json"), "utf8"));
+    expect(settings).toEqual({
+      defaultModel: "local/model",
+      packages: ["npm:example"],
+      theme: "cassette-futurism-light",
+    });
+    expect(realpathSync(join(piAgentDir, "themes/cassette-futurism-light.json"))).toBe(
+      join(REPO_ROOT, "themes/cassette-futurism/dist/pi/cassette-futurism-light.json"),
+    );
+    expect(realpathSync(join(piAgentDir, "themes/zenith-dark.json"))).toBe(
+      join(REPO_ROOT, "themes/zenith/dist/pi/zenith-dark.json"),
+    );
+
+    applyTheme("zenith", "dark", ["pi"], options);
+    expect(JSON.parse(readFileSync(join(piAgentDir, "settings.json"), "utf8")).theme).toBe("zenith-dark");
+  });
+
   test("applies opencode theme assets and tui.json pointer", () => {
     const root = mkdtempSync(join(tmpdir(), "theme-tape-opencode-"));
     created.push(root);

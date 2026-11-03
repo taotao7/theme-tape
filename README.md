@@ -135,8 +135,8 @@ theme-tape apply --theme zenith --mode dark
 ### Pi
 
 - installs both dark/light theme JSONs into `~/.pi/agent/themes` (or `$PI_CODING_AGENT_DIR/themes`); run `theme-tape install --theme all --components pi`
-- preserves the rest of `settings.json` and points Pi's `theme` setting at the active `cassette-futurism-*` or `zenith-*` theme
-- `theme-tape apply --theme cassette-futurism --mode light` switches Pi to `cassette-futurism-light`; Pi can also be reloaded with `/reload`
+- preserves the rest of `settings.json` and points Pi's `theme` setting at the active mode (`cassette-futurism-light` or `cassette-futurism-dark`)
+- Tern owns the terminal canvas through omp; Pi is a separate TUI inside it, so theme-tape switches Pi explicitly with `--mode`; run `/reload` in a running Pi after applying
 
 ### opencode
 

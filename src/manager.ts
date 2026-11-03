@@ -1111,6 +1111,9 @@ function writePiThemeConfig(themeId: ThemeId, mode: Mode, options: ResolvedOptio
       throw new Error(`Invalid Pi settings ${integration.settingsPath}: expected JSON object`);
     }
   }
+  // Tern owns the terminal canvas and follows omp's light/dark pair. Pi is a
+  // separate TUI inside that canvas, so theme-tape writes the active mode
+  // explicitly instead of relying on a terminal color query.
   current.theme = `${THEMES[themeId].piThemeBase}-${mode}`;
   writeManagedFile(integration.settingsPath, `${JSON.stringify(current, null, 2)}\n`, options);
 }

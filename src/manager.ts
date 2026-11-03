@@ -401,8 +401,8 @@ export function applyTheme(
   }
 
   if (components.includes("pi")) {
-    writePiThemeConfig(theme.id, mode, resolved);
-    messages.push(`Pi switched to ${theme.id}-${mode}`);
+    writePiThemeConfig(theme.id, resolved);
+    messages.push(`Pi switched to ${theme.id} light/dark pair`);
   }
 
   if (components.includes("tmux") && resolved.reloadTmux) {
@@ -1093,7 +1093,7 @@ function readPiThemeSelection(options: ResolvedOptions): string {
   }
 }
 
-function writePiThemeConfig(themeId: ThemeId, mode: Mode, options: ResolvedOptions): void {
+function writePiThemeConfig(themeId: ThemeId, options: ResolvedOptions): void {
   const integration = detectPiIntegration(options);
   let current: Record<string, unknown> = {};
   if (existsSync(integration.settingsPath)) {
@@ -1111,10 +1111,11 @@ function writePiThemeConfig(themeId: ThemeId, mode: Mode, options: ResolvedOptio
       throw new Error(`Invalid Pi settings ${integration.settingsPath}: expected JSON object`);
     }
   }
-  // Tern owns the terminal canvas and follows omp's light/dark pair. Pi is a
-  // separate TUI inside that canvas, so theme-tape writes the active mode
-  // explicitly instead of relying on a terminal color query.
-  current.theme = `${THEMES[themeId].piThemeBase}-${mode}`;
+  // Pi supports an automatic light/dark pair. Keep the pair in settings so
+  // Pi follows the terminal appearance exposed by Tern/omp instead of being
+  // frozen to the mode that was active when theme-tape last ran.
+  const themeBase = THEMES[themeId].piThemeBase;
+  current.theme = `${themeBase}-light/${themeBase}-dark`;
   writeManagedFile(integration.settingsPath, `${JSON.stringify(current, null, 2)}\n`, options);
 }
 
@@ -1133,7 +1134,7 @@ function configurePi(options: ResolvedOptions): {managedConfig: DoctorPath} {
       options,
     );
   }
-  writePiThemeConfig(state.theme, state.mode, options);
+  writePiThemeConfig(state.theme, options);
   return {managedConfig: createDoctorPath(integration.settingsPath)};
 }
 

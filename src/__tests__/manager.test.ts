@@ -286,7 +286,7 @@ describe("theme-tape manager", () => {
     expect(settings).toEqual({
       defaultModel: "local/model",
       packages: ["npm:example"],
-      theme: "cassette-futurism-light",
+      theme: "cassette-futurism-light/cassette-futurism-dark",
     });
     expect(realpathSync(join(piAgentDir, "themes/cassette-futurism-light.json"))).toBe(
       join(REPO_ROOT, "themes/cassette-futurism/dist/pi/cassette-futurism-light.json"),
@@ -296,7 +296,9 @@ describe("theme-tape manager", () => {
     );
 
     applyTheme("zenith", "dark", ["pi"], options);
-    expect(JSON.parse(readFileSync(join(piAgentDir, "settings.json"), "utf8")).theme).toBe("zenith-dark");
+    expect(JSON.parse(readFileSync(join(piAgentDir, "settings.json"), "utf8")).theme).toBe(
+      "zenith-light/zenith-dark",
+    );
   });
 
   test("applies opencode theme assets and tui.json pointer", () => {
